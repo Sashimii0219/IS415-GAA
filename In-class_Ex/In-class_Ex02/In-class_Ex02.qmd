@@ -1,0 +1,131 @@
+---
+title: "In-class_Ex02"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+# Installing and loading R packages
+
+The R packages that I will be using today are *arrow, lubridate, tmap, tidyverse, sf and funModeling*.
+
+```{r}
+pacman::p_load(arrow, lubridate, tmap, tidyverse, sf, funModeling)
+```
+
+# Importing Data
+
+#### Dataset
+
+We will be importing the dataset using *`read_parquet()`* function of *arrow* package.
+
+We will then convert the data type of *pingtimestamp* from character to date-time.
+
+```{r}
+#| eval: false
+df <- read_parquet("data/GrabPosisi/part-00000-8bbff892-97d2-4011-9961-703e38972569.c000.snappy.parquet")
+
+df$pingtimestamp <- as_datetime(df$pingtimestamp)
+```
+
+#### Writing dataset to rds file format
+
+```{r}
+#| eval: false
+# write_rds(df, "data/rds/part0.rds")
+```
+
+#### Extracting trip starting locations
+
+```{r}
+#| eval: false
+origin_df <- df %>%
+  group_by(trj_id) %>%
+  arrange(pingtimestamp) %>% 
+  filter(row_number()==1) %>% # Arrange timestamp with earliest ping at the start for each trj_id(starting location)
+  mutate(weekday = wday(pingtimestamp,
+                        label=TRUE,
+                        abbr=TRUE),
+         start_hr = factor(hour(pingtimestamp)),
+         day = factor(mday(pingtimestamp)))
+```
+
+#### Extracting trip ending locations
+
+```{r eval = FALSE}
+#| eval: false
+destination_df <- df %>%
+  group_by(trj_id) %>%
+  arrange(desc(pingtimestamp)) %>%
+  filter(row_number()==1) %>% # Same as previous code but desc, so ending lcoation
+  mutate(weekday = wday(pingtimestamp,
+                        label=TRUE,
+                        abbr=TRUE),
+         end_hr = factor(hour(pingtimestamp)),
+         day = factor(mday(pingtimestamp)))
+```
+
+#### Writing starting and ending locations to rds file format
+
+```{r}
+#| eval: false
+write_rds(origin_df, "data/rds/origin_df.rds")
+write_rds(destination_df, "data/rds/destination_df.rds")
+```
+
+#### Reading starting and ending locations back into the quarto document
+
+```{r}
+origin_df <- read_rds("data/rds/origin_df.rds")
+destination_df <- read_rds("data/rds/destination_df.rds")
+```
+
+#### Visualising frequency distribution
+
+We will be using *`freq()`* function of *funModeling* package on the variable 'weekday'.
+
+```{r}
+freq(data = origin_df,
+     input = 'weekday')
+```
+
+```{r}
+origin_df
+```
+
+#### Converting into sf tibble data.frame
+
+```{r}
+origin_sf <- st_as_sf(origin_df, 
+                       coords = c("rawlng", "rawlat"),
+                       crs=4326) %>%
+  st_transform(crs = 3414)
+```
+
+#### Visualising as Point Symbol Map
+
+```{r}
+tmap_mode("plot")
+tm_shape(origin_sf) +
+  tm_dots()
+```
+
+#### Importing Master Plan 2019 Planning Subzone Boundary
+
+```{r}
+mpsz2019 <- st_read("data/dataGov/MPSZ2019.kml") %>%
+  st_transform(crs = 3414)
+```
+
+```{r}
+tm_shape(mpsz2019) +
+  tm_polygons() +
+tm_shape(origin_sf) +
+  tm_dots()
+```
