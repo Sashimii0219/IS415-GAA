@@ -13,7 +13,13 @@ date: "`r Sys.Date()`"
 
 # Overview
 
-Summary of learning
+Spatial Point Pattern Analysis is the evaluation of pattern/distribution of a set of points on a surface, where the points can be location of events (crime, traffic accident) or business services (chain outlets, hospitals).
+
+In this Hands-on Exercise, we will be answering the following questions:
+
+-   Are the childcare centres in Singapore randomly distributed throughout the country?
+
+-   if the answer is not, then the next logical question is where are the locations with higher concentration of childcare centres?
 
 # Getting Started
 
@@ -21,11 +27,7 @@ Summary of learning
 
 The R packages that I will be using today are *sf*, *spatstat*, *raster*, *maptools* and *tmap*.
 
-sf - Import, manage and process vector-based geospatial data in R.
-spatstat - Wide range of useful functions for point pattern analysis. In this hands-on exercise, it will be used to perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
-raster - reads, writes, manipulates, analyses and model of gridded spatial data (i.e. raster). In this hands-on exercise, it will be used to convert image output generate by spatstat into raster format.
-maptools -  Provides a set of tools for manipulating geographic data. In this hands-on exercise, we mainly use it to convert Spatial objects into ppp format of spatstat.
-tmap - Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
+sf - Import, manage and process vector-based geospatial data in R. spatstat - Wide range of useful functions for point pattern analysis. In this hands-on exercise, it will be used to perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer. raster - reads, writes, manipulates, analyses and model of gridded spatial data (i.e. raster). In this hands-on exercise, it will be used to convert image output generate by spatstat into raster format. maptools - Provides a set of tools for manipulating geographic data. In this hands-on exercise, we mainly use it to convert Spatial objects into ppp format of spatstat. tmap - Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
 
 ```{r}
 pacman::p_load(maptools, sf, raster, spatstat, tmap)
@@ -35,8 +37,7 @@ pacman::p_load(maptools, sf, raster, spatstat, tmap)
 
 #### Dataset
 
-The data that we will be using to create the choropleth map are:
--   Point feature data providing both location and attribute information of childcare centres downloaded from Data.gov.sg, in geojson format
+The data that we will be using to create the choropleth map are: - Point feature data providing both location and attribute information of childcare centres downloaded from Data.gov.sg, in geojson format
 
 <!-- -->
 
@@ -56,6 +57,7 @@ childcare_sf <- st_read("data/PreSchoolsLocation.geojson") %>%
 ```
 
 Coastal outline file where?
+
 ```{r}
 #sg_sf <- st_read(dsn = "chap04/data", layer="CostalOutline")
 ```
@@ -68,4 +70,3 @@ mpsz_sf <- st_read(dsn = "data",
   st_transform(crs = 3414)
 mpsz_sf 
 ```
-
