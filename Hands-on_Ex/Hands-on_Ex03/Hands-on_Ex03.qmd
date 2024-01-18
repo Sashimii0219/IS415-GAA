@@ -27,10 +27,30 @@ In this Hands-on Exercise, we will be answering the following questions:
 
 The R packages that I will be using today are *sf*, *spatstat*, *raster*, *maptools* and *tmap*.
 
-sf - Import, manage and process vector-based geospatial data in R. spatstat - Wide range of useful functions for point pattern analysis. In this hands-on exercise, it will be used to perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer. raster - reads, writes, manipulates, analyses and model of gridded spatial data (i.e. raster). In this hands-on exercise, it will be used to convert image output generate by spatstat into raster format. maptools - Provides a set of tools for manipulating geographic data. In this hands-on exercise, we mainly use it to convert Spatial objects into ppp format of spatstat. tmap - Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
+-   sf - Import, manage and process vector-based geospatial data in R.
+
+```{=html}
+<!-- -->
+```
+-   spatstat - Wide range of useful functions for point pattern analysis. In this hands-on exercise, it will be used to perform 1st- and 2nd-order spatial point patterns analysis and derive kernel density estimation (KDE) layer.
+
+```{=html}
+<!-- -->
+```
+-   raster - reads, writes, manipulates, analyses and model of gridded spatial data (i.e. raster). In this hands-on exercise, it will be used to convert image output generate by spatstat into raster format.
+
+```{=html}
+<!-- -->
+```
+-   maptools - Provides a set of tools for manipulating geographic data. In this hands-on exercise, we mainly use it to convert Spatial objects into ppp format of spatstat.
+
+```{=html}
+<!-- -->
+```
+-   tmap - Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
 
 ```{r}
-pacman::p_load(maptools, sf, raster, spatstat, tmap)
+pacman::p_load(maptools, sf, raster, spatstat, tmap, tidyverse)
 ```
 
 # Importing Data
@@ -56,17 +76,172 @@ childcare_sf <- st_read("data/PreSchoolsLocation.geojson") %>%
   st_transform(crs = 3414)
 ```
 
-Coastal outline file where?
+**CostalOutline** files:
 
 ```{r}
-#sg_sf <- st_read(dsn = "chap04/data", layer="CostalOutline")
+sg_sf <- st_read(dsn = "data/Coastal", layer="CostalOutline")
+glimpse(sg_sf)
+```
+
+
+Or deriving from MPSZ19.geojson file:
+
+```{r}
+sg_sf2 <- st_read(dsn = "data/Coastal/MPSZ19.geojson") %>%  st_boundary() %>% .['Name']
+
+st_crs(sg_sf2) 
 ```
 
 **MP14_SUBZONE_WEB_PL** files:
 
 ```{r}
 mpsz_sf <- st_read(dsn = "data", 
-                layer = "MP14_SUBZONE_WEB_PL") %>%
+                layer = "MP14_SUBZONE_WEB_PL")  %>%
   st_transform(crs = 3414)
-mpsz_sf 
+st_crs(mpsz_sf) 
 ```
+
+# Mapping the geospatial data
+#### Previously...
+By using what we learnt from previous hands-on exercise, we can use xxx to map out the locations for the childcare centres.
+
+Alternatively, we can also prepare a pin map by using tm_shape() with tm_dots().
+
+The background can be changed, with 3 different internet map layers - ESRI.WorldGrayCanvas, OpenStreetMap, and ESRI.WorldTopoMap.
+
+Reminder to change back to tmap_mode('plot') after, as each interactive map consumes connection.
+```{r}
+tmap_mode('view')
+tm_shape(childcare_sf)+
+  tm_dots()
+```
+
+Data Wrangling - sp's Spatial Class
+
+#### Converting sf data frames to sp’s Spatial* class
+```{r}
+childcare <- as_Spatial(childcare_sf)
+mpsz <- as_Spatial(mpsz_sf)
+sg <- as_Spatial(sg_sf)
+```
+
+#### Converting the Spatial* class into generic sp format
+As spatstat requires the analytical data to be in ppp object form, we need to convert the Spatial classes* into Spatial object first as there is no direct way to convert a Spatial* classes into ppp object.
+
+```{r}
+childcare_sp <- as(childcare, "SpatialPoints")
+sg_sp <- as(sg, "SpatialPolygons")
+```
+
+#### Converting the generic sp format into spatstat’s ppp format
+Now, we will use as.ppp() function of spatstat to convert the spatial data into spatstat’s ppp object format.
+
+```{r}
+childcare_ppp <- as(childcare_sp, "ppp")
+```
+
+TL:DR: sf data frames -> Spatial* class -> generic sp format -> spatstat’s ppp format
+
+```{r}
+summary(childcare_ppp)
+```
+
+When we look at the summary statistics, we can see that there are duplicated points.
+
+#### Handling duplicated points
+Checking for any duplicates and the number of duplicates
+```{r}
+# Check for any duplicates
+any(duplicated(childcare_ppp))
+
+# Count the number of duplicates
+sum(multiplicity(childcare_ppp) > 1)
+```
+
+By plotting childcare data, we can see that
+```{r}
+tmap_mode('view')
+tm_shape(childcare) +
+  tm_dots(alpha=0.4, 
+          size=0.05)
+tmap_mode('plot')
+```
+
+To overcome this problem there are 3 ways:
+1. Delete duplicates, but some useful point events will be lost.
+2. Jittering, which will add a small perturbation to the duplicate points so that they do not occupy the exact same space.
+3. Make each point "Unique" and then attach the duplicates of the points to the patterns as marks, as attributes of the points. By doing this, we will need analytical technique that takes into account these marks.
+
+We will be using the jittering method.
+
+```{r}
+# Jittering Approach
+childcare_ppp_jit <- rjitter(childcare_ppp, 
+                             retry=TRUE, 
+                             nsim=1, 
+                             drop=TRUE)
+```
+
+#### Creating owin object
+When analysing spatial point patterns, it is a good practice to confine the analysis with a geographical area like Singapore boundary. In spatstat, an object called owin is specially designed to represent this polygonal region.
+
+We will now convert sg SpatialPolygon object into owin object of spatstat.
+```{r}
+sg_owin <- as(sg_sp, "owin")
+```
+
+#### Combining point events object and owin object
+
+In our last step of geospatial data wrangling, we will extract childcare events that are located within Singapore by using the owin object.
+
+```{r}
+childcareSG_ppp = childcare_ppp[sg_owin]
+```
+
+```{r}
+plot(childcareSG_ppp)
+```
+
+# First-order Spatial Point Patterns Analysis
+In this section, we will perform first-order SPPA by using spatstat package. The hands-on exercise will focus on:
+- deriving kernel density estimation (KDE) layer for visualising and exploring the intensity of point processes,
+- performing Confirmatory Spatial Point Patterns Analysis by using Nearest Neighbour statistics.
+
+### Kernel Density Estimation
+We will be using density() of spatstat to calculate the kernel density estimation of childcare services in Singapore, with the following parameters:
+- bw.diggle() automatic bandwidth selection method. Other recommended methods are bw.CvL(), bw.scott() or bw.ppl().
+- The smoothing kernel used is gaussian, which is the default. Other smoothing methods are: “epanechnikov”, “quartic” or “disc”.
+- The intensity estimate is corrected for edge effect bias by using method described by Jones (1993) and Diggle (2010, equation 18.9). The default is FALSE.
+
+```{r}
+kde_childcareSG_bw <- density(childcareSG_ppp,
+                              sigma=bw.diggle,
+                              edge=TRUE,
+                            kernel="gaussian") 
+```
+
+Bandwidth used to compute the kde layer:
+```{r}
+bw <- bw.diggle(childcareSG_ppp)
+bw
+```
+Plotting the kernel density.
+```{r}
+plot(kde_childcareSG_bw)
+```
+The density values of the output range from 0 to 0.000035 which is way too small to comprehend. As the default unit of measurement of svy21 is in meter, the density value computed is in “number of points per square meter”. We will need to convert this from meter to kilometer.
+
+#### Rescalling KDE values
+We will use rescale() to convert the unit of measurement from meter to kilometer.
+
+```{r}
+childcareSG_ppp.km <- rescale(childcareSG_ppp, 1000, "km")
+```
+
+Now let's re-run density() using the rescaled data and plot the kde map.
+
+```{r}
+kde_childcareSG.bw <- density(childcareSG_ppp.km, sigma=bw.diggle, edge=TRUE, kernel="gaussian")
+plot(kde_childcareSG.bw)
+```
+
