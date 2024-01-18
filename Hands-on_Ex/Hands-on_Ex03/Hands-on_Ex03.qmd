@@ -111,7 +111,7 @@ The background can be changed, with 3 different internet map layers - ESRI.World
 
 Reminder to change back to tmap_mode('plot') after, as each interactive map consumes connection.
 ```{r}
-tmap_mode('view')
+tmap_mode('plot')
 tm_shape(childcare_sf)+
   tm_dots()
 ```
@@ -158,13 +158,12 @@ any(duplicated(childcare_ppp))
 sum(multiplicity(childcare_ppp) > 1)
 ```
 
-By plotting childcare data, we can see that
+By plotting childcare data, we can see that the duplicated points are darker.
 ```{r}
 tmap_mode('view')
 tm_shape(childcare) +
   tm_dots(alpha=0.4, 
           size=0.05)
-tmap_mode('plot')
 ```
 
 To overcome this problem there are 3 ways:
