@@ -1,0 +1,12 @@
+---
+title: "Hands-on Exercise 3 Part 2: 2nd Order Spatial Point Patterns Analysis Methods"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
