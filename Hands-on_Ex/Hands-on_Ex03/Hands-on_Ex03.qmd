@@ -77,6 +77,8 @@ childcare_sf <- st_read("data/PreSchoolsLocation.geojson") %>%
 
 ```{r}
 sg_sf <- st_read(dsn = "data/Coastal", layer="CostalOutline")
+
+# sg_sf <- mpsz_sf %>% st_union(), deriving from mpsz file
 glimpse(sg_sf)
 ```
 

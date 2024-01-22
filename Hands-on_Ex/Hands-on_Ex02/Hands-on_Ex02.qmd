@@ -230,7 +230,7 @@ tm_shape(mpsz_pop2020)+
   tm_borders(alpha = 0.5)
 ```
 
-#### Plotting choropleth map with custome break
+#### Plotting choropleth map with custom break
 
 For all the built-in styles, the category breaks are computed internally. This can be overriden using the *`breaks`* argument of the *`tm_fill()`* function. In order to end up with n categories, n+1 elements must be specified in the breaks option (the values must be in increasing order).
 

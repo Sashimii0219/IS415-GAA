@@ -1,0 +1,86 @@
+---
+title: "In-class_Ex03"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+# Loading packages
+
+```{r}
+#install.packages("maptools", repos = "https://packagemanager.posit.co/cran/2023-10-13")
+pacman::p_load(sf, spNetwork, tmap, classInt, viridis, tidyverse)
+```
+
+# 
+
+```{r}
+network <- st_read(dsn="data/geospatial", layer="Punggol_St")
+childcare <- st_read(dsn="data/geospatial", layer="Punggol_CC")
+```
+
+```{r}
+tmap_mode('view')
+tm_shape(childcare) +
+  tm_dots() +
+  tm_shape(network) +
+  tm_lines()
+
+#differs from Grab data
+tmap_mode('plot')
+```
+
+```{r}
+lixels <- lixelize_lines(network,
+                         750,
+                         mindist = 375)
+# # fun fact: Using 375 as people only willing to walk 350m to nearest POI instead of taking transport.
+```
+
+# Give center point of the lines
+
+```{r}
+samples <- lines_center(lixels)
+```
+
+# Calculate density
+
+```{r}
+#densities <- nkde(network,
+#                  events = childcare,
+#                  w = rep(1,nrow(childcare)),
+#                  samples = samples,
+#                  kernel_name = "quartic", # Kernel used
+#                  bw = 300,
+#                  div = "bw",
+#                  method = "simple",
+#                  digits = 1,
+#                  tol = 1,
+#                  grid_shape = c(1,1),
+#                  max_depth = 8,
+#                  agg = 5, # Aggregate events within a 5m radius (faster calculation)
+#                  sparse = TRUE,
+#                  verbose = FALSE)
+```
+
+```{r}
+#lixels$density <- densities
+#childcare$density <- densities
+```
+
+```{r}
+#tmap_mode('view')
+#tm_shape(lixels) +
+#  tm_lines(col="density") +
+#  tm_shape(childcare) +
+#  tm_dots()
+
+#tmap_mode('plot')
+
+```

@@ -1,3 +1,80 @@
 ---
 title: "Take-home_Ex01"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
 ---
+WIP
+# Objective
+We will be applying appropriate spatial point patterns analysis methods learned in class to discover the geographical and spatio-temporal distribution of Grab hailing services locations in Singapore.
+
+# Getting Started
+## Loading R packages
+The R packages that we will be using in this exercise are as follows:
+- arrow: For reading parquet files (Grab-Posisi Dataset)
+- lubridate: To handle the date formatting
+- sf: Import, manage and process vector-based geospatial data in R.
+- spatstat: Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer.
+- tidyverse
+- spNetwork
+- tmap
+- classInt
+- viridis
+
+```{r}
+pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, classInt, viridis)
+```
+
+## Importing the datasets
+The datasets that we will be using are:
+- Grab-Posisi (Aspatial)
+- Road data set from OpenStreetMap
+- Master Plan 2019 Subzone Boundary (No Sea) from Data.gov.sg
+
+# Grab-Posisi Dataset
+```{r}
+df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
+
+df$pingtimestamp <- as_datetime(df$pingtimestamp)
+```
+
+```{r}
+#append
+df1 <- rbind(df,df)
+```
+
+# OpenStreetMap Road Dataset
+```{r}
+sg_road <- st_read(dsn = "data/geospatial", 
+                layer = "gis_osm_roads_free_1") %>% st_transform(crs = 3414)
+st_crs(sg_road)
+```
+```{r}
+st_crs(sg_road)
+```
+
+```{r}
+plot(head(sg_road))
+```
+
+# Master Plan 2019 Subzone Boundary (No Sea) Dataset
+```{r}
+mpsz2019 <- st_read("data/geospatial/MasterPlan2019SubzoneBoundaryNoSeaKML.kml")
+
+st_crs(mpsz2019)
+```
+
+```{r}
+glimpse(mpsz2019)
+```
+
+```{r}
+# st_intersects(mpsz2019, sg_road)
+```
+

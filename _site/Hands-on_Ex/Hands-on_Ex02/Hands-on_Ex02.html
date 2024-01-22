@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2024-01-21">
+<meta name="dcterms.date" content="2024-01-22">
 
 <title>IS415-GAA - Hands-on Exercise 2: Thematic Mapping and GeoVisualisation with R</title>
 <style>
@@ -147,6 +147,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex02/In-class_Ex02.html" rel="" target="">
  <span class="dropdown-text">In-class Exercise 2</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex03/In-class_Ex03.html" rel="" target="">
+ <span class="dropdown-text">In-class Exercise 3</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -216,7 +220,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">January 21, 2024</p>
+      <p class="date">January 22, 2024</p>
     </div>
   </div>
   
@@ -519,8 +523,8 @@ Projected CRS: SVY21</code></pre>
 </div>
 </div>
 </section>
-<section id="plotting-choropleth-map-with-custome-break" class="level4">
-<h4 class="anchored" data-anchor-id="plotting-choropleth-map-with-custome-break">Plotting choropleth map with custome break</h4>
+<section id="plotting-choropleth-map-with-custom-break" class="level4">
+<h4 class="anchored" data-anchor-id="plotting-choropleth-map-with-custom-break">Plotting choropleth map with custom break</h4>
 <p>For all the built-in styles, the category breaks are computed internally. This can be overriden using the <em><code>breaks</code></em> argument of the <em><code>tm_fill()</code></em> function. In order to end up with n categories, n+1 elements must be specified in the breaks option (the values must be in increasing order).</p>
 <p>It is a good practice to get some descriptive statistics on the variable before setting the break points.</p>
 <div class="cell">
