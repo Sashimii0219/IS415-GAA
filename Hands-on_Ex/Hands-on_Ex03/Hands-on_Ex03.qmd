@@ -253,19 +253,23 @@ plot(kde_childcareSG.bw)
 ```
 
 ### Working with different automatic badwidth methods
+
 Beside bw.diggle(), there are three other spatstat functions can be used to determine the bandwidth:
 
-- bw.CvL()
+-   bw.CvL()
+
 ```{r}
 bw.CvL(childcareSG_ppp.km)
 ```
 
-- bw.scott()
+-   bw.scott()
+
 ```{r}
 bw.scott(childcareSG_ppp.km)
 ```
 
-- bw.ppl()
+-   bw.ppl()
+
 ```{r}
 bw.ppl(childcareSG_ppp.km)
 ```
@@ -273,6 +277,7 @@ bw.ppl(childcareSG_ppp.km)
 Use bw.ppl() to produce more appropriate value if pattern consists predominantly of tight clusters. If trying to detect single tight cluster in the midst of random noise then bw.diggle().
 
 Comparing bw.ppl() AND bw.diggle()
+
 ```{r}
 kde_childcareSG.ppl <- density(childcareSG_ppp.km, 
                                sigma=bw.ppl, 
@@ -283,8 +288,8 @@ plot(kde_childcareSG.bw, main = "bw.diggle")
 plot(kde_childcareSG.ppl, main = "bw.ppl")
 ```
 
-
 ### Working with different kernel methods
+
 The default kernel method used in density.ppp() is gaussian, but there are 3 other options available, namely Epanechnikov, Quartic and Dics.
 
 ```{r}
@@ -312,7 +317,9 @@ plot(density(childcareSG_ppp.km,
 ```
 
 # Fixed and Adaptive KDE
+
 ### Computing KDE by using fixed bandwidth
+
 Now we will compute a KDE layer by defining a bandwidth of 600m. In the code chunk, 0.6 = 600m as unit of measurement used is km.
 
 ```{r}
@@ -321,6 +328,7 @@ plot(kde_childcareSG_600)
 ```
 
 ### Computing KDE by using adaptive bandwidth
+
 Cons of fixed bandwidth - very sensitive to highly skewed distribution of spatial point patterns over geographical units, e.g. urban vs rural. In such cases, we use adaptive bandwidth.
 
 Deriving adaptive kernel density using density.adaptive() of spatstat package.
@@ -339,16 +347,19 @@ plot(kde_childcareSG_adaptive, main = "Adaptive bandwidth")
 ```
 
 ### Converting KDE output into grid object
+
 Converting results so that it is suitable for mapping purposes.
+
 ```{r}
 gridded_kde_childcareSG_bw <- as.SpatialGridDataFrame.im(kde_childcareSG.bw)
 spplot(gridded_kde_childcareSG_bw)
 ```
 
 #### Converting gridded output into raster
+
 Next, we will convert the gridded kernal density objects into RasterLayer object by using raster() of raster package.
 
-Definition: A raster layer is any other type of layer that consists of pixels — images, masks, paintings, and photos — so when you paint or edit images, you're working with raster layers. A raster layer (or bitmap) is made up of pixels which are, essentially, points of color placed within a rectangular grid.
+Definition: A raster layer is any other type of layer that consists of pixels --- images, masks, paintings, and photos --- so when you paint or edit images, you're working with raster layers. A raster layer (or bitmap) is made up of pixels which are, essentially, points of color placed within a rectangular grid.
 
 ```{r}
 kde_childcareSG_bw_raster <- raster(gridded_kde_childcareSG_bw)
@@ -361,6 +372,7 @@ kde_childcareSG_bw_raster
 ```
 
 #### Assigning projection systems
+
 We will then assign the CRS information on this layer.
 
 ```{r}
@@ -369,6 +381,7 @@ kde_childcareSG_bw_raster
 ```
 
 ### Visualising the output in tmap
+
 Now, on to displaying the raster layer in cartographic quality map using tmap package.
 
 ```{r}
@@ -378,9 +391,11 @@ tm_shape(kde_childcareSG_bw_raster) +
 ```
 
 ### Comparing Spatial Point Patterns using KDE
+
 In the next section, we will be comparing the KDE of childcare at Punggol, Tampines, Choa Chu Kang, and Jurong West planning areas.
 
 #### Extracting study area
+
 We first extract the target planning areas.
 
 ```{r}
@@ -400,9 +415,9 @@ plot(ck, main = "Choa Chu Kang")
 plot(jw, main = "Jurong West")
 ```
 
-
 #### Converting the spatial point data frame into generic sp format
-SpatialPolygonsDataFrame layers -> generic spatialpolygons layers.
+
+SpatialPolygonsDataFrame layers -\> generic spatialpolygons layers.
 
 ```{r}
 pg_sp = as(pg, "SpatialPolygons")
@@ -412,6 +427,7 @@ jw_sp = as(jw, "SpatialPolygons")
 ```
 
 #### Creating owin object
+
 Converting to owin object required by spatstat.
 
 ```{r}
@@ -422,6 +438,7 @@ jw_owin = as(jw_sp, "owin")
 ```
 
 #### Combining childcare points and the study area
+
 First we extract childcare that are within the specific regions for later use.
 
 ```{r}
@@ -451,6 +468,7 @@ plot(childcare_jw_ppp.km, main="Jurong West", size = 0.3)
 ```
 
 ### Computing KDE
+
 Now onto the main objective - computing the KDE of these four planning area (using bw.diggle method).
 
 ```{r}
@@ -478,6 +496,7 @@ plot(density(childcare_jw_ppp.km,
 ```
 
 Now with fixed bandwidth KDE
+
 ```{r}
 par(mfrow=c(2,2))
 plot(density(childcare_pg_ppp.km, 
@@ -501,7 +520,9 @@ plot(density(childcare_jw_ppp.km,
              kernel="gaussian"),
      main="Jurong West")
 ```
+
 # Nearest Neighbour Analysis
+
 In this section, we will perform the Clark-Evans test of aggregation for a spatial point pattern by using clarkevans.test() of statspat package.
 
 Using 95% confidence interval, the test hypotheses are:
@@ -518,7 +539,7 @@ clarkevans.test(childcareSG_ppp,
                 nsim=99)
 ```
 
-As p-value < 0.05, we reject Ho, which means that the distribution of childcare services in singapore are not randomly distributed.
+As p-value \< 0.05, we reject Ho, which means that the distribution of childcare services in singapore are not randomly distributed.
 
 # Choa Chu Kang
 

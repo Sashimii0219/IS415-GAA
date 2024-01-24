@@ -10,3 +10,206 @@ execute:
   warning: false
 date: "`r Sys.Date()`"
 ---
+
+# Overview
+
+Network constrained Spatial Point Patterns Analysis (NetSPAA) is a collection of spatial point patterns analysis methods special developed for analysing spatial point event occurs on or alongside network. The spatial point event can be locations of traffic accident or childcare centre for example. The network, on the other hand can be a road network or river network.
+
+In this hands-on exercise, we are going to gain hands-on experience on using appropriate functions of spNetwork package:
+
+- to derive network constrained kernel density estimation (NetKDE), and
+- to perform network G-function and k-function analysis
+
+# Getting Started
+
+## Installing and loading R packages
+
+The R packages that I will be using today are *sf*, *spatstat*, *raster*, *maptools* and *tmap*.
+
+-   spNetwork - which provides functions to perform Spatial Point Patterns Analysis such as kernel density estimation (KDE) and K-function on network. It also can be used to build spatial matrices (‘listw’ objects like in ‘spdep’ package) to conduct any kind of traditional spatial analysis with spatial weights based on reticular distances.
+
+<!-- -->
+
+-   rgdal - which provides bindings to the ‘Geospatial’ Data Abstraction Library (GDAL) (>= 1.11.4) and access to projection/transformation operations from the PROJ library. In this exercise, rgdal will be used to import geospatial data in R and store as sp objects.
+
+<!-- -->
+
+-   sp - which provides classes and methods for dealing with spatial data in R. In this exercise, it will be used to manage SpatialPointsDataFrame and SpatiaLinesDataFrame, and for performing projection transformation.
+
+<!-- -->
+
+-   sf - Import, manage and process vector-based geospatial data in R.
+
+<!-- -->
+
+-   tmap - Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
+```{r}
+install.packages("rgdal", repos = "https://packagemanager.posit.co/cran/2023-10-13")
+```
+
+```{r}
+pacman::p_load(sp, sf, rgdal, spNetwork, tmap)
+```
+
+# Importing Data
+
+## Dataset
+
+We will be analysing the spatial distribution of childcare centre in Punggol planning area using the following two geospatial data sets:
+
+<!-- -->
+
+-   Punggol_St, a line features geospatial data which store the road network within Punggol Planning Area.
+
+<!-- -->
+
+-   Punggol_CC, a point feature geospatial data which store the location of childcare centres within Punggol Planning Area.
+
+## Importing Geospatial Data
+We will use st_read() of sf package to important Punggol_St and Punggol_CC geospatial data sets into RStudio as sf data frames.
+
+```{r}
+network <- st_read(dsn="data", 
+                   layer="Punggol_St")
+```
+
+```{r}
+childcare <- st_read(dsn="data",
+                     layer="Punggol_CC")
+```
+
+```{r}
+str(network)
+str(childcare)
+```
+We use spTransform() of sp package to assign EPSG code to the SpatialDataFrames. The epsg:3414 is the code for svy21.
+
+```{r}
+childcare <- st_transform(childcare, crs = 3414)
+network <- st_transform(network, crs = 3414)
+```
+
+# Visualising the Geospatial Data
+Before jumping into analysis, it is a good practice to visualise the geospatial data first.
+
+```{r}
+plot(network)
+plot(childcare,add=T,col='red',pch = 19)
+```
+
+Higher quality version using tmap()
+
+```{r}
+tmap_mode('view')
+tm_shape(childcare) + 
+  tm_dots() + 
+  tm_shape(network) +
+  tm_lines()
+tmap_mode('plot')
+```
+
+# Network Constrained KDE (NetKDE) Analysis
+We will now perform NetKDE analysis by using appropriate functions provided in spNetwork package.
+
+## Preparing the lixels objects
+Before we can compute NetKDE, the SpatialLines object need to be cut into lixels with a specified minimal distance, and this can be done using lixelize_lines() of spNetwork package.
+
+```{r}
+lixels <- lixelize_lines(network, 
+                         700, 
+                         mindist = 350)
+```
+
+NOTE: After cut, if the length of the final lixel is shorter than the minimum distance, then it is added to the previous lixel. If NULL, then mindist = maxdist/10. Also note that the segments that are already shorter than the minimum distance are not modified
+
+## Generating line centre points
+Next, we will use lines_center() of spNetwork to generate a SpatialPointsDataFrame (i.e. samples) with line centre points.
+```{r}
+samples <- lines_center(lixels)
+```
+
+## Computing NetKDE
+```{r}
+densities <- nkde(network, 
+                  events = childcare,
+                  w = rep(1,nrow(childcare)),
+                  samples = samples,
+                  kernel_name = "quartic", # kernel method
+                  bw = 300, 
+                  div= "bw", 
+                  method = "simple", 
+                  # method used to calculate NKDE. spNetwork supports 3 popular methods, namely simple, discontinuous, and continuous
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(1,1), 
+                  max_depth = 8,
+                  agg = 5, #we aggregate events within a 5m radius (faster calculation)
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+
+### Visualising NetKDE
+Before computing, we need to insert the computed values back into samples and lixels objects as density field.
+
+```{r}
+samples$density <- densities
+lixels$density <- densities
+```
+
+Since svy21 projection system is in meter, the computed density values are very small i.e. 0.0000005. We will thus need to rescale the density values from number of events per meter to number of events per kilometer. 
+
+```{r}
+# rescaling to help the mapping
+samples$density <- samples$density*1000
+lixels$density <- lixels$density*1000
+```
+
+```{r}
+tmap_mode('view')
+tm_shape(lixels)+
+  tm_lines(col="density")+
+tm_shape(childcare)+
+  tm_dots()
+tmap_mode('plot')
+```
+
+
+# Network Constrained G- and K-Function Analysis
+We are now going to perform complete spatial randomness (CSR) test by using kfunctions() of spNetwork package. The null hypothesis is defined as:
+
+- The observed spatial point events (i.e distribution of childcare centres) are uniformly distributed over a street network in Punggol Planning Area.
+
+The CSR test is based on the assumption of the binomial point process which implies the hypothesis that the childcare centres are randomly and independently distributed over the street network.
+
+If this hypothesis is rejected, we may infer that the distribution of childcare centres are spatially interacting and dependent on each other; as a result, they may form nonrandom patterns.
+
+```{r}
+kfun_childcare <- kfunctions(network, 
+                             childcare,
+                             start = 0, 
+                             # A double, the start value for evaluating the k and                                  g functions.
+                             end = 1000, 
+                             #  A double, the last value for evaluating the k                                 and g functions.
+                             step = 50, 
+                             # A double, the jump between two evaluations of the                               k and g function
+                             width = 50,
+                             # The width of each donut for the g-function
+                             nsim = 50,
+                             # number of Monte Carlo simulations required.
+                             resolution = 50,
+                             verbose = FALSE, 
+                             conf_int = 0.05
+                             #  A double indicating the width confidence interval                               (default = 0.05).
+                             )
+```
+
+```{r}
+kfun_childcare$plotk
+
+kfun_childcare$plotg
+
+kfun_childcare$values
+```
+
+The blue line is the empirical network K-function of the childcare centres in Punggol planning area. The gray envelop represents the results of the 50 simulations in the interval 2.5% - 97.5%. Because the blue line between the distance of 250m-400m are below the gray area, we can infer that the childcare centres in Punggol planning area resemble regular pattern at the distance of 250m-400m.
+
