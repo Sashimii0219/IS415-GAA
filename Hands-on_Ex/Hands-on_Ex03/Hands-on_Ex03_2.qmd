@@ -24,7 +24,7 @@ In this hands-on exercise, we are going to gain hands-on experience on using app
 
 ## Installing and loading R packages
 
-The R packages that I will be using today are *sf*, *spatstat*, *raster*, *maptools* and *tmap*.
+The R packages that we will be using today are *sf*, *spatstat*, *raster*, *maptools* and *tmap*.
 
 -   spNetwork - which provides functions to perform Spatial Point Patterns Analysis such as kernel density estimation (KDE) and K-function on network. It also can be used to build spatial matrices (‘listw’ objects like in ‘spdep’ package) to conduct any kind of traditional spatial analysis with spatial weights based on reticular distances.
 
@@ -51,9 +51,9 @@ install.packages("rgdal", repos = "https://packagemanager.posit.co/cran/2023-10-
 pacman::p_load(sp, sf, rgdal, spNetwork, tmap)
 ```
 
-# Importing Data
+## Importing Data
 
-## Dataset
+### Dataset
 
 We will be analysing the spatial distribution of childcare centre in Punggol planning area using the following two geospatial data sets:
 
@@ -65,7 +65,7 @@ We will be analysing the spatial distribution of childcare centre in Punggol pla
 
 -   Punggol_CC, a point feature geospatial data which store the location of childcare centres within Punggol Planning Area.
 
-## Importing Geospatial Data
+### Importing Geospatial Data
 We will use st_read() of sf package to important Punggol_St and Punggol_CC geospatial data sets into RStudio as sf data frames.
 
 ```{r}
