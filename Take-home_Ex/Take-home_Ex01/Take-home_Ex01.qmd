@@ -20,7 +20,7 @@ WIP \# Objective We will be applying appropriate spatial point patterns analysis
 The R packages that we will be using in this exercise are as follows: - arrow: For reading parquet files (Grab-Posisi Dataset) - lubridate: To handle the date formatting - sf: Import, manage and process vector-based geospatial data in R. - spatstat: Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer. - tidyverse - spNetwork - tmap - classInt - viridis
 
 ```{r}
-#pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, classInt, viridis)
+pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, classInt, viridis)
 ```
 
 ## Importing the datasets
@@ -30,9 +30,9 @@ The datasets that we will be using are: - Grab-Posisi (Aspatial) - Road data set
 # Grab-Posisi Dataset
 
 ```{r}
-#df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
+df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
 
-#df$pingtimestamp <- as_datetime(df$pingtimestamp)
+df$pingtimestamp <- as_datetime(df$pingtimestamp)
 ```
 
 ```{r}
@@ -43,30 +43,41 @@ The datasets that we will be using are: - Grab-Posisi (Aspatial) - Road data set
 # OpenStreetMap Road Dataset
 
 ```{r}
-#sg_road <- st_read(dsn = "data/geospatial", layer = "gis_osm_roads_free_1") %>% st_transform(crs = 3414)
-#st_crs(sg_road)
-```
-
-```{r}
-#st_crs(sg_road)
-```
-
-```{r}
-#plot(head(sg_road))
+sg_road <- st_read(dsn = "data/geospatial", layer = "gis_osm_roads_free_1") %>% st_transform(crs = 3414)
+st_crs(sg_road)
 ```
 
 # Master Plan 2019 Subzone Boundary (No Sea) Dataset
 
 ```{r}
-#mpsz2019 <- st_read("data/geospatial/MasterPlan2019SubzoneBoundaryNoSeaKML.kml")
+mpsz2019 <- st_read("data/geospatial", layer = "MPSZ-2019") %>% st_transform(crs = 3414)
 
-#st_crs(mpsz2019)
+st_crs(mpsz2019)
 ```
 
 ```{r}
-#glimpse(mpsz2019)
+glimpse(mpsz2019)
 ```
 
 ```{r}
-# st_intersects(mpsz2019, sg_road)
+# Check which points are within the outlined area
+points_within_area <- st_intersection(sg_road, mpsz2019)
 ```
+# Getting Grab Origin Locations
+```{r}
+origin_df <- df %>%
+  group_by(trj_id) %>%
+  arrange(pingtimestamp) %>% 
+  filter(row_number()==1) %>% # Arrange timestamp with earliest ping at the start for each trj_id(starting location)
+  mutate(weekday = wday(pingtimestamp,
+                        label=TRUE,
+                        abbr=TRUE),
+         start_hr = factor(hour(pingtimestamp)),
+         day = factor(mday(pingtimestamp)))
+```
+
+```{r}
+tmap_mode('view')
+tm_shape(points_within_area[points_within_area$SUBZONE_N == "Marina East"]) + tm_lines()
+```
+
