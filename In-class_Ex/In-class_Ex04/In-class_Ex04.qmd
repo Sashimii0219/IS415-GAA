@@ -1,0 +1,68 @@
+---
+title: "In-class Exercise 4"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+```{r}
+pacman::p_load(sf, spdep, tmap, tidyverse, knitr, GWmodel)
+```
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+```
+
+```{r}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+```{r}
+hunan <- left_join(hunan, hunan2012) %>% dplyr::select(1:4, 7, 15)
+```
+
+```{r}
+wm_q <- poly2nb(hunan, queen=TRUE)
+summary(wm_q)
+```
+
+```{r}
+longitude <- map_dbl(hunan$geometry, ~st_centroid(.x)[[1]])
+```
+
+```{r}
+latitude <- map_dbl(hunan$geometry, ~st_centroid(.x)[[2]])
+```
+
+```{r}
+coords <- cbind(longitude, latitude)
+```
+
+```{r}
+plot(hunan$geometry, border="lightgrey")
+plot(wm_q, coords, pch=19, cex=0.6, add=TRUE, col="red")
+```
+
+Working with GWSS (Geographically Weighted Summary Statistics)
+```{r}
+hunan_sp <- hunan %>% as_Spatial()
+```
+
+```{r}
+gwstat <- gwss(data = hunan_sp,
+               vars = "GDPPC",
+               bw = 6,
+               kernel = "bisquare",
+               adaptive = TRUE,
+               longlat = T)
+```
+
+Plot the plot in Spatial Window Sum done in HOE4 but instead use GDPPC_LM, LSD, LVar, LSKE, LCV etc.
+

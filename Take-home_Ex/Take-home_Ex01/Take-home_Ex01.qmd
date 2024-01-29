@@ -17,10 +17,21 @@ WIP \# Objective We will be applying appropriate spatial point patterns analysis
 
 ## Loading R packages
 
-The R packages that we will be using in this exercise are as follows: - arrow: For reading parquet files (Grab-Posisi Dataset) - lubridate: To handle the date formatting - sf: Import, manage and process vector-based geospatial data in R. - spatstat: Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer. - tidyverse - spNetwork - tmap - classInt - viridis
+The R packages that we will be using in this exercise are as follows: 
+- arrow: For reading parquet files (Grab-Posisi Dataset) 
+- lubridate: To handle the date formatting 
+- sf: Import, manage and process vector-based geospatial data in R. 
+- spatstat: Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer. 
+- tidyverse 
+- spNetwork 
+- tmap 
+- classInt 
+- viridis
+- raster
+
 
 ```{r}
-pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, classInt, viridis)
+pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, classInt, viridis, spatstat, raster)
 ```
 
 ## Importing the datasets
@@ -30,29 +41,20 @@ The datasets that we will be using are: - Grab-Posisi (Aspatial) - Road data set
 # Grab-Posisi Dataset
 
 ```{r}
-df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
+grab_df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
 
-df$pingtimestamp <- as_datetime(df$pingtimestamp)
-```
-
-```{r}
-#append
-#df1 <- rbind(df,df)
+grab_df$pingtimestamp <- as_datetime(grab_df$pingtimestamp)
 ```
 
 # OpenStreetMap Road Dataset
-
 ```{r}
 sg_road <- st_read(dsn = "data/geospatial", layer = "gis_osm_roads_free_1") %>% st_transform(crs = 3414)
 st_crs(sg_road)
 ```
 
 # Master Plan 2019 Subzone Boundary (No Sea) Dataset
-
 ```{r}
 mpsz2019 <- st_read("data/geospatial", layer = "MPSZ-2019") %>% st_transform(crs = 3414)
-
-st_crs(mpsz2019)
 ```
 
 ```{r}
@@ -65,10 +67,10 @@ points_within_area <- st_intersection(sg_road, mpsz2019)
 ```
 # Getting Grab Origin Locations
 ```{r}
-origin_df <- df %>%
+origin_df <- grab_df %>%
   group_by(trj_id) %>%
   arrange(pingtimestamp) %>% 
-  filter(row_number()==1) %>% # Arrange timestamp with earliest ping at the start for each trj_id(starting location)
+  filter(row_number()==1) %>% 
   mutate(weekday = wday(pingtimestamp,
                         label=TRUE,
                         abbr=TRUE),
@@ -76,8 +78,100 @@ origin_df <- df %>%
          day = factor(mday(pingtimestamp)))
 ```
 
+# Grab Origin SF
 ```{r}
-tmap_mode('view')
-tm_shape(points_within_area[points_within_area$SUBZONE_N == "Marina East"]) + tm_lines()
+origin_sf <- st_as_sf(origin_df, 
+                       coords = c("rawlng", "rawlat"),
+                       crs=4326) %>%
+  st_transform(crs = 3414)
 ```
 
+```{r}
+sg_boundary <- mpsz2019 %>% st_union()
+plot(sg_boundary)
+```
+
+# Playing with points_within_area file
+```{r}
+points_within_area[points_within_area$"SUBZONE_N" == "MARINA EAST", ]
+```
+
+```{r}
+subzones <- unique(points_within_area$"SUBZONE_N")
+subzones
+```
+
+```{r}
+plot(mpsz2019)
+```
+
+```{r}
+tp <- mpsz2019 %>%
+  filter(PLN_AREA_N == "TAMPINES")
+
+tm_shape(tp) + tm_polygons()
+```
+
+```{r}
+tm_shape(tp) + 
+tm_polygons()
+tm_shape(origin_sf) + 
+tm_dots() +
+tm_shape(points_within_area[points_within_area$"SUBZONE_N" == "TAMPINES EAST", ]) + 
+tm_lines()
+```
+
+# Creating point ppp objects from origin
+```{r}
+origin_ppp <- as.ppp(origin_sf)
+summary(origin_ppp)
+
+```
+
+# Creating owin object
+```{r}
+sg_owin <- as.owin(sg_boundary)
+```
+
+```{r}
+originSG_ppp = origin_ppp[sg_owin]
+```
+
+```{r}
+summary(originSG_ppp)
+```
+
+# Checking for duplicates
+```{r}
+# Check for any duplicates
+any(duplicated(originSG_ppp))
+
+# Count the number of duplicates
+sum(multiplicity(originSG_ppp) > 1)
+```
+
+Can see that no duplicates.
+
+# Rescale
+```{r}
+originSG_ppp.km <- rescale(originSG_ppp, 1000, "km")
+
+```
+
+```{r}
+kde_originSG_bw <- density(originSG_ppp.km,
+                              sigma=bw.ppl,
+                              edge=TRUE,
+                            kernel="gaussian") 
+```
+
+```{r}
+plot(kde_originSG_bw)
+```
+# Computing KDE by using fixed bandwidth
+```{r}
+kde_originSG_800 <- density(originSG_ppp.km, sigma=0.8, edge=TRUE, kernel="gaussian")
+plot(kde_originSG_800)
+```
+4 dense population, north south east west
+segment them then re analyse
