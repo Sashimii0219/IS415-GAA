@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2024-01-29">
+<meta name="dcterms.date" content="2024-02-01">
 
 <title>IS415-GAA - Take-home_Ex01</title>
 <style>
@@ -198,14 +198,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#getting-started" id="toc-getting-started" class="nav-link active" data-scroll-target="#getting-started">Getting Started</a>
+  <li><a href="#objective" id="toc-objective" class="nav-link active" data-scroll-target="#objective">1. Objective</a></li>
+  <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started">2. Getting Started</a>
   <ul class="collapse">
-  <li><a href="#loading-r-packages" id="toc-loading-r-packages" class="nav-link" data-scroll-target="#loading-r-packages">Loading R packages</a></li>
-  <li><a href="#importing-the-datasets" id="toc-importing-the-datasets" class="nav-link" data-scroll-target="#importing-the-datasets">Importing the datasets</a></li>
+  <li><a href="#loading-r-packages" id="toc-loading-r-packages" class="nav-link" data-scroll-target="#loading-r-packages">2.1 Loading R packages</a></li>
+  <li><a href="#importing-the-datasets" id="toc-importing-the-datasets" class="nav-link" data-scroll-target="#importing-the-datasets">2.2 Importing the datasets</a></li>
   </ul></li>
-  <li><a href="#grab-posisi-dataset" id="toc-grab-posisi-dataset" class="nav-link" data-scroll-target="#grab-posisi-dataset">Grab-Posisi Dataset</a></li>
-  <li><a href="#openstreetmap-road-dataset" id="toc-openstreetmap-road-dataset" class="nav-link" data-scroll-target="#openstreetmap-road-dataset">OpenStreetMap Road Dataset</a></li>
-  <li><a href="#master-plan-2019-subzone-boundary-no-sea-dataset" id="toc-master-plan-2019-subzone-boundary-no-sea-dataset" class="nav-link" data-scroll-target="#master-plan-2019-subzone-boundary-no-sea-dataset">Master Plan 2019 Subzone Boundary (No Sea) Dataset</a></li>
+  <li><a href="#geospatial-data-wrangling" id="toc-geospatial-data-wrangling" class="nav-link" data-scroll-target="#geospatial-data-wrangling"><strong>3. Geospatial Data Wrangling</strong></a>
+  <ul class="collapse">
+  <li><a href="#data-pre-processing---mpsz2019" id="toc-data-pre-processing---mpsz2019" class="nav-link" data-scroll-target="#data-pre-processing---mpsz2019">3.1 Data Pre-processing - MPSZ2019</a>
+  <ul class="collapse">
+  <li><a href="#excluding-outer-islands" id="toc-excluding-outer-islands" class="nav-link" data-scroll-target="#excluding-outer-islands">3.1.1 Excluding Outer Islands</a></li>
+  <li><a href="#invalid-geometries" id="toc-invalid-geometries" class="nav-link" data-scroll-target="#invalid-geometries">3.1.2 Invalid Geometries</a></li>
+  <li><a href="#missing-values" id="toc-missing-values" class="nav-link" data-scroll-target="#missing-values">3.1.3 <strong>Missing Values</strong></a></li>
+  <li><a href="#creating-boundary" id="toc-creating-boundary" class="nav-link" data-scroll-target="#creating-boundary">3.1.4 <strong>Creating boundary?</strong></a></li>
+  </ul></li>
+  <li><a href="#data-pre-processing---openstreetmap-road-dataset" id="toc-data-pre-processing---openstreetmap-road-dataset" class="nav-link" data-scroll-target="#data-pre-processing---openstreetmap-road-dataset">3.2 Data Pre-processing - OpenStreetMap Road Dataset</a>
+  <ul class="collapse">
+  <li><a href="#limiting-the-dataset" id="toc-limiting-the-dataset" class="nav-link" data-scroll-target="#limiting-the-dataset">3.2.1 Limiting the dataset</a></li>
+  <li><a href="#invalid-geometries-1" id="toc-invalid-geometries-1" class="nav-link" data-scroll-target="#invalid-geometries-1">3.2.2 Invalid Geometries</a></li>
+  <li><a href="#missing-values-1" id="toc-missing-values-1" class="nav-link" data-scroll-target="#missing-values-1">3.2.3 <strong>Missing Values</strong></a></li>
+  </ul></li>
+  <li><a href="#data-pre-processing---grab-posisi-dataset" id="toc-data-pre-processing---grab-posisi-dataset" class="nav-link" data-scroll-target="#data-pre-processing---grab-posisi-dataset">3.3 Data Pre-processing - Grab-Posisi Dataset</a></li>
+  </ul></li>
   <li><a href="#getting-grab-origin-locations" id="toc-getting-grab-origin-locations" class="nav-link" data-scroll-target="#getting-grab-origin-locations">Getting Grab Origin Locations</a></li>
   <li><a href="#grab-origin-sf" id="toc-grab-origin-sf" class="nav-link" data-scroll-target="#grab-origin-sf">Grab Origin SF</a></li>
   <li><a href="#playing-with-points_within_area-file" id="toc-playing-with-points_within_area-file" class="nav-link" data-scroll-target="#playing-with-points_within_area-file">Playing with points_within_area file</a></li>
@@ -233,7 +248,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">January 29, 2024</p>
+      <p class="date">February 1, 2024</p>
     </div>
   </div>
   
@@ -243,26 +258,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header>
 
-<p>WIP # Objective We will be applying appropriate spatial point patterns analysis methods learned in class to discover the geographical and spatio-temporal distribution of Grab hailing services locations in Singapore.</p>
+<section id="objective" class="level1">
+<h1>1. Objective</h1>
+<p>We will be applying appropriate spatial point patterns analysis methods learned in class to discover the geographical and spatio-temporal distribution of Grab hailing services locations in Singapore.</p>
+</section>
 <section id="getting-started" class="level1">
-<h1>Getting Started</h1>
+<h1>2. Getting Started</h1>
 <section id="loading-r-packages" class="level2">
-<h2 class="anchored" data-anchor-id="loading-r-packages">Loading R packages</h2>
-<p>The R packages that we will be using in this exercise are as follows: - arrow: For reading parquet files (Grab-Posisi Dataset) - lubridate: To handle the date formatting - sf: Import, manage and process vector-based geospatial data in R. - spatstat: Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer. - tidyverse - spNetwork - tmap - classInt - viridis - raster</p>
+<h2 class="anchored" data-anchor-id="loading-r-packages">2.1 Loading R packages</h2>
+<p>The R packages that we will be using in this exercise are as follows:</p>
+<ul>
+<li><p><strong>arrow:</strong> For reading parquet files (Grab-Posisi Dataset)</p></li>
+<li><p><strong>lubridate:</strong> To handle the date formatting</p></li>
+<li><p><strong>sf:</strong> Import, manage and process vector-based geospatial data in R.</p></li>
+<li><p><strong>tidyverse:</strong> a collection of packages for data science tasks</p></li>
+<li><p><strong>spatstat:</strong> Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer.</p></li>
+<li><p><strong>spNetwork</strong></p></li>
+<li><p><strong>tmap:</strong> Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.</p></li>
+<li><p><strong>classInt</strong></p></li>
+<li><p><strong>viridis</strong></p></li>
+<li><p><strong>raster</strong></p></li>
+</ul>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(arrow, lubridate, sf, tidyverse, spNetwork, tmap, classInt, viridis, spatstat, raster)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(arrow, lubridate, sf, tidyverse, spNetwork, tmap, </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>               classInt, viridis, spatstat, raster)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
 <section id="importing-the-datasets" class="level2">
-<h2 class="anchored" data-anchor-id="importing-the-datasets">Importing the datasets</h2>
-<p>The datasets that we will be using are: - Grab-Posisi (Aspatial) - Road data set from OpenStreetMap - Master Plan 2019 Subzone Boundary (No Sea) from Data.gov.sg</p>
-</section>
-</section>
-<section id="grab-posisi-dataset" class="level1">
-<h1>Grab-Posisi Dataset</h1>
+<h2 class="anchored" data-anchor-id="importing-the-datasets">2.2 Importing the datasets</h2>
+<p>The datasets that we will be using are as follow:</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true">Grab-Posisi Dataset</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false">OpenStreetMap Road Dataset</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false">Master Plan 2019 Subzone Boundary Dataset</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<p>Using <em><code>read_parquet()</code></em> function from <strong>arrow</strong> package to import the grab data, then changing pingtimestamp column to datetime object</p>
 <div class="cell">
 <details>
 <summary>Show code</summary>
@@ -271,9 +303,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>grab_df<span class="sc">$</span>pingtimestamp <span class="ot">&lt;-</span> <span class="fu">as_datetime</span>(grab_df<span class="sc">$</span>pingtimestamp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-</section>
-<section id="openstreetmap-road-dataset" class="level1">
-<h1>OpenStreetMap Road Dataset</h1>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<p>Transforming the coordinate system at the same time when we are importing the data</p>
 <div class="cell">
 <details>
 <summary>Show code</summary>
@@ -281,7 +313,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reading layer `gis_osm_roads_free_1' from data source 
-  `/Users/jacksontan/Documents/Sashimii0219/IS415-GAA/Take-home_Ex/Take-home_Ex01/data/geospatial' 
+  `C:\Sashimii0219\IS415-GAA\Take-home_Ex\Take-home_Ex01\data\geospatial' 
   using driver `ESRI Shapefile'
 Simple feature collection with 1759836 features and 10 fields
 Geometry type: LINESTRING
@@ -289,65 +321,18 @@ Dimension:     XY
 Bounding box:  xmin: 99.66041 ymin: 0.8021131 xmax: 119.2601 ymax: 7.514393
 Geodetic CRS:  WGS 84</code></pre>
 </div>
-<details>
-<summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">st_crs</span>(sg_road)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-<div class="cell-output cell-output-stdout">
-<pre><code>Coordinate Reference System:
-  User input: EPSG:3414 
-  wkt:
-PROJCRS["SVY21 / Singapore TM",
-    BASEGEOGCRS["SVY21",
-        DATUM["SVY21",
-            ELLIPSOID["WGS 84",6378137,298.257223563,
-                LENGTHUNIT["metre",1]]],
-        PRIMEM["Greenwich",0,
-            ANGLEUNIT["degree",0.0174532925199433]],
-        ID["EPSG",4757]],
-    CONVERSION["Singapore Transverse Mercator",
-        METHOD["Transverse Mercator",
-            ID["EPSG",9807]],
-        PARAMETER["Latitude of natural origin",1.36666666666667,
-            ANGLEUNIT["degree",0.0174532925199433],
-            ID["EPSG",8801]],
-        PARAMETER["Longitude of natural origin",103.833333333333,
-            ANGLEUNIT["degree",0.0174532925199433],
-            ID["EPSG",8802]],
-        PARAMETER["Scale factor at natural origin",1,
-            SCALEUNIT["unity",1],
-            ID["EPSG",8805]],
-        PARAMETER["False easting",28001.642,
-            LENGTHUNIT["metre",1],
-            ID["EPSG",8806]],
-        PARAMETER["False northing",38744.572,
-            LENGTHUNIT["metre",1],
-            ID["EPSG",8807]]],
-    CS[Cartesian,2],
-        AXIS["northing (N)",north,
-            ORDER[1],
-            LENGTHUNIT["metre",1]],
-        AXIS["easting (E)",east,
-            ORDER[2],
-            LENGTHUNIT["metre",1]],
-    USAGE[
-        SCOPE["Cadastre, engineering survey, topographic mapping."],
-        AREA["Singapore - onshore and offshore."],
-        BBOX[1.13,103.59,1.47,104.07]],
-    ID["EPSG",3414]]</code></pre>
 </div>
 </div>
-</section>
-<section id="master-plan-2019-subzone-boundary-no-sea-dataset" class="level1">
-<h1>Master Plan 2019 Subzone Boundary (No Sea) Dataset</h1>
+<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<p>Transforming the coordinate system at the same time when we are importing the data</p>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>mpsz2019 <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/geospatial"</span>, <span class="at">layer =</span> <span class="st">"MPSZ-2019"</span>) <span class="sc">%&gt;%</span> <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>mpsz2019 <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/geospatial"</span>, <span class="at">layer =</span> <span class="st">"MPSZ-2019"</span>) <span class="sc">%&gt;%</span> <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reading layer `MPSZ-2019' from data source 
-  `/Users/jacksontan/Documents/Sashimii0219/IS415-GAA/Take-home_Ex/Take-home_Ex01/data/geospatial' 
+  `C:\Sashimii0219\IS415-GAA\Take-home_Ex\Take-home_Ex01\data\geospatial' 
   using driver `ESRI Shapefile'
 Simple feature collection with 332 features and 6 fields
 Geometry type: MULTIPOLYGON
@@ -356,45 +341,358 @@ Bounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775
 Geodetic CRS:  WGS 84</code></pre>
 </div>
 </div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="geospatial-data-wrangling" class="level1">
+<h1><strong>3. Geospatial Data Wrangling</strong></h1>
+<p>Before we begin exploring the data, we will first need to perform some data pre-processing on the datasets that we have imported.</p>
+<section id="data-pre-processing---mpsz2019" class="level2">
+<h2 class="anchored" data-anchor-id="data-pre-processing---mpsz2019">3.1 Data Pre-processing - MPSZ2019</h2>
+<section id="excluding-outer-islands" class="level3">
+<h3 class="anchored" data-anchor-id="excluding-outer-islands">3.1.1 Excluding Outer Islands</h3>
+<p>As grab won’t be able to reach offshore places, we will exclude the outer islands from this dataset. We will do this through the following steps:</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true">Finding the islands</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false">Excluding the islands</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-3" role="tab" aria-controls="tabset-2-3" aria-selected="false">Checking out the difference</a></li></ul>
+<div class="tab-content">
+<div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
+<p>We will first take a look at the unique planning areas in Singapore using unique() on the PLN_AREA_N column of mpsz2019 dataset.</p>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(mpsz2019)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(mpsz2019<span class="sc">$</span>PLN_AREA_N)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>Rows: 332
-Columns: 7
-$ SUBZONE_N  &lt;chr&gt; "MARINA EAST", "INSTITUTION HILL", "ROBERTSON QUAY", "JURON…
-$ SUBZONE_C  &lt;chr&gt; "MESZ01", "RVSZ05", "SRSZ01", "WISZ01", "MUSZ02", "MPSZ05",…
-$ PLN_AREA_N &lt;chr&gt; "MARINA EAST", "RIVER VALLEY", "SINGAPORE RIVER", "WESTERN …
-$ PLN_AREA_C &lt;chr&gt; "ME", "RV", "SR", "WI", "MU", "MP", "WI", "WI", "SI", "SI",…
-$ REGION_N   &lt;chr&gt; "CENTRAL REGION", "CENTRAL REGION", "CENTRAL REGION", "WEST…
-$ REGION_C   &lt;chr&gt; "CR", "CR", "CR", "WR", "CR", "CR", "WR", "WR", "CR", "CR",…
-$ geometry   &lt;MULTIPOLYGON [m]&gt; MULTIPOLYGON (((33222.98 29..., MULTIPOLYGON (…</code></pre>
+<pre><code> [1] "MARINA EAST"             "RIVER VALLEY"           
+ [3] "SINGAPORE RIVER"         "WESTERN ISLANDS"        
+ [5] "MUSEUM"                  "MARINE PARADE"          
+ [7] "SOUTHERN ISLANDS"        "BUKIT MERAH"            
+ [9] "DOWNTOWN CORE"           "STRAITS VIEW"           
+[11] "QUEENSTOWN"              "OUTRAM"                 
+[13] "MARINA SOUTH"            "ROCHOR"                 
+[15] "KALLANG"                 "TANGLIN"                
+[17] "NEWTON"                  "CLEMENTI"               
+[19] "BEDOK"                   "PIONEER"                
+[21] "JURONG EAST"             "ORCHARD"                
+[23] "GEYLANG"                 "BOON LAY"               
+[25] "BUKIT TIMAH"             "NOVENA"                 
+[27] "TOA PAYOH"               "TUAS"                   
+[29] "JURONG WEST"             "SERANGOON"              
+[31] "BISHAN"                  "TAMPINES"               
+[33] "BUKIT BATOK"             "HOUGANG"                
+[35] "CHANGI BAY"              "PAYA LEBAR"             
+[37] "ANG MO KIO"              "PASIR RIS"              
+[39] "BUKIT PANJANG"           "TENGAH"                 
+[41] "SELETAR"                 "SUNGEI KADUT"           
+[43] "YISHUN"                  "MANDAI"                 
+[45] "PUNGGOL"                 "CHOA CHU KANG"          
+[47] "SENGKANG"                "CHANGI"                 
+[49] "CENTRAL WATER CATCHMENT" "SEMBAWANG"              
+[51] "WESTERN WATER CATCHMENT" "WOODLANDS"              
+[53] "NORTH-EASTERN ISLANDS"   "SIMPANG"                
+[55] "LIM CHU KANG"           </code></pre>
+</div>
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mpsz2019)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Note that there are 3 areas with island in their name, mainly “NORTH-EASTERN ISLANDS”, “SOUTHERN ISLANDS”, and “WESTERN ISLANDS”.</p>
+</div>
+<div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
+<p>To exclude the islands, we simply have to pass a condition to exclude these islands in the subset function.</p>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>mpsz2019_new <span class="ot">&lt;-</span> <span class="fu">subset</span>(mpsz2019, <span class="sc">!</span>(PLN_AREA_N <span class="sc">%in%</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>            <span class="fu">c</span>(<span class="st">"NORTH-EASTERN ISLANDS"</span>, <span class="st">"SOUTHERN ISLANDS"</span>, <span class="st">"WESTERN ISLANDS"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</div>
+<div id="tabset-2-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-3-tab">
+<p>Great! Now let’s check if we indeed removed the maps!</p>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_mode</span>(<span class="st">'plot'</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>before <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(mpsz2019) <span class="sc">+</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="st">"PLN_AREA_N"</span>) <span class="sc">+</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tmap_options</span>(<span class="at">max.categories =</span> <span class="dv">53</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>after <span class="ot">&lt;-</span> <span class="fu">tm_shape</span>(mpsz2019_new) <span class="sc">+</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_polygons</span>(<span class="st">"PLN_AREA_N"</span>) <span class="sc">+</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tmap_options</span>(<span class="at">max.categories =</span> <span class="dv">53</span>)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(before, after)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="invalid-geometries" class="level3">
+<h3 class="anchored" data-anchor-id="invalid-geometries">3.1.2 Invalid Geometries</h3>
+<p>We will be using the <em><code>st_is_valid()</code></em> function to test for invalid geometries.</p>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> <span class="fu">st_is_valid</span>(mpsz2019_new,<span class="at">reason=</span><span class="cn">TRUE</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of invalid geometries</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">which</span>(test<span class="sc">!=</span> <span class="st">"Valid Geometry"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 3</code></pre>
+</div>
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reason</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>test[<span class="fu">which</span>(test<span class="sc">!=</span> <span class="st">"Valid Geometry"</span>)]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Ring Self-intersection[26922.6162000542 27033.332999988]" 
+[2] "Ring Self-intersection[38991.2589000446 31986.5599999869]"
+[3] "Ring Self-intersection[15432.4749999835 31319.7159999867]"</code></pre>
+</div>
+</div>
+<p>We can see that there are 3 invalid geometries. Let’s fix them using <em><code>st_make_valid()</code></em>.</p>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>mpsz2019_new<span class="ot">&lt;-</span> <span class="fu">st_make_valid</span>(mpsz2019_new)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">which</span>(<span class="fu">st_is_valid</span>(mpsz2019_new) <span class="sc">==</span> <span class="cn">FALSE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+</section>
+<section id="missing-values" class="level3">
+<h3 class="anchored" data-anchor-id="missing-values">3.1.3 <strong>Missing Values</strong></h3>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>mpsz2019_new[<span class="fu">rowSums</span>(<span class="fu">is.na</span>(mpsz2019_new))<span class="sc">!=</span><span class="dv">0</span>,]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 0 features and 6 fields
+Bounding box:  xmin: NA ymin: NA xmax: NA ymax: NA
+Projected CRS: SVY21 / Singapore TM
+[1] SUBZONE_N  SUBZONE_C  PLN_AREA_N PLN_AREA_C REGION_N   REGION_C   geometry  
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+</div>
+</div>
+<p>Using the code above, we can see that there are no missing values.</p>
+</section>
+<section id="creating-boundary" class="level3">
+<h3 class="anchored" data-anchor-id="creating-boundary">3.1.4 <strong>Creating boundary?</strong></h3>
+</section>
+</section>
+<section id="data-pre-processing---openstreetmap-road-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="data-pre-processing---openstreetmap-road-dataset">3.2 Data Pre-processing - OpenStreetMap Road Dataset</h2>
+<section id="limiting-the-dataset" class="level3">
+<h3 class="anchored" data-anchor-id="limiting-the-dataset">3.2.1 Limiting the dataset</h3>
+<p>As the dataset contains data from Malaysia and Brunei as well, we will use <em><code>st_intersection()</code></em> to limit the data to only Singapore.</p>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>points_within_sg <span class="ot">&lt;-</span> <span class="fu">st_intersection</span>(sg_road, mpsz2019)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Now, we can see that in points_within_sg it only contain Singapore road data, combined with the other values from mpsz2019 like “PLN_AREA_N” used above.</p>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(points_within_sg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "osm_id"     "code"       "fclass"     "name"       "ref"       
+ [6] "oneway"     "maxspeed"   "layer"      "bridge"     "tunnel"    
+[11] "SUBZONE_N"  "SUBZONE_C"  "PLN_AREA_N" "PLN_AREA_C" "REGION_N"  
+[16] "REGION_C"   "geometry"  </code></pre>
+</div>
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(points_within_sg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 6 features and 16 fields
+Geometry type: LINESTRING
+Dimension:     XY
+Bounding box:  xmin: 31466.72 ymin: 30680.54 xmax: 32815.21 ymax: 30873.74
+Projected CRS: SVY21 / Singapore TM
+        osm_id code        fclass               name  ref oneway maxspeed layer
+4052  23946437 5122   residential          Rhu Cross &lt;NA&gt;      F       50     0
+9668  32605139 5131 motorway_link               &lt;NA&gt; &lt;NA&gt;      F       40     0
+20076 46337834 5131 motorway_link               &lt;NA&gt; &lt;NA&gt;      F       50    -2
+21690 49961799 5111      motorway East Coast Parkway  ECP      F       70     1
+26543 74722808 5111      motorway East Coast Parkway  ECP      F       70     1
+29808 99007260 5131 motorway_link               &lt;NA&gt; &lt;NA&gt;      F       50     1
+      bridge tunnel   SUBZONE_N SUBZONE_C  PLN_AREA_N PLN_AREA_C       REGION_N
+4052       F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+9668       F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+20076      F      T MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+21690      F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+26543      T      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+29808      T      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+      REGION_C                       geometry
+4052        CR LINESTRING (31889.45 30760....
+9668        CR LINESTRING (32768.57 30857....
+20076       CR LINESTRING (32815.21 30873....
+21690       CR LINESTRING (32365.45 30845....
+26543       CR LINESTRING (31611.63 30720....
+29808       CR LINESTRING (31611.63 30720....</code></pre>
+</div>
+</div>
+</section>
+<section id="invalid-geometries-1" class="level3">
+<h3 class="anchored" data-anchor-id="invalid-geometries-1">3.2.2 Invalid Geometries</h3>
+<p>Again, using the <em><code>st_is_valid()</code></em> function to test for invalid geometries.</p>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> <span class="fu">st_is_valid</span>(points_within_sg,<span class="at">reason=</span><span class="cn">TRUE</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Number of invalid geometries</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">which</span>(test<span class="sc">!=</span> <span class="st">"Valid Geometry"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reason</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>test[<span class="fu">which</span>(test<span class="sc">!=</span> <span class="st">"Valid Geometry"</span>)]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>character(0)</code></pre>
+</div>
+</div>
+<p>No invalid geometries!</p>
+</section>
+<section id="missing-values-1" class="level3">
+<h3 class="anchored" data-anchor-id="missing-values-1">3.2.3 <strong>Missing Values</strong></h3>
+<div class="cell">
+<details>
+<summary>Show code</summary>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>points_within_sg</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 241743 features and 16 fields
+Geometry type: GEOMETRY
+Dimension:     XY
+Bounding box:  xmin: 2679.373 ymin: 15901.59 xmax: 56022.44 ymax: 50220.06
+Projected CRS: SVY21 / Singapore TM
+First 10 features:
+         osm_id code        fclass                      name  ref oneway
+4052   23946437 5122   residential                 Rhu Cross &lt;NA&gt;      F
+9668   32605139 5131 motorway_link                      &lt;NA&gt; &lt;NA&gt;      F
+20076  46337834 5131 motorway_link                      &lt;NA&gt; &lt;NA&gt;      F
+21690  49961799 5111      motorway        East Coast Parkway  ECP      F
+26543  74722808 5111      motorway        East Coast Parkway  ECP      F
+29808  99007260 5131 motorway_link                      &lt;NA&gt; &lt;NA&gt;      F
+32774 116796554 5111      motorway Marina Coastal Expressway  MCE      F
+32776 116796563 5111      motorway Marina Coastal Expressway  MCE      F
+34199 122067627 5111      motorway        East Coast Parkway  ECP      F
+39013 131384443 5111      motorway Marina Coastal Expressway  MCE      F
+      maxspeed layer bridge tunnel   SUBZONE_N SUBZONE_C  PLN_AREA_N PLN_AREA_C
+4052        50     0      F      F MARINA EAST    MESZ01 MARINA EAST         ME
+9668        40     0      F      F MARINA EAST    MESZ01 MARINA EAST         ME
+20076       50    -2      F      T MARINA EAST    MESZ01 MARINA EAST         ME
+21690       70     1      F      F MARINA EAST    MESZ01 MARINA EAST         ME
+26543       70     1      T      F MARINA EAST    MESZ01 MARINA EAST         ME
+29808       50     1      T      F MARINA EAST    MESZ01 MARINA EAST         ME
+32774       80    -2      F      T MARINA EAST    MESZ01 MARINA EAST         ME
+32776       80    -2      F      T MARINA EAST    MESZ01 MARINA EAST         ME
+34199       70     1      T      F MARINA EAST    MESZ01 MARINA EAST         ME
+39013       80    -2      F      T MARINA EAST    MESZ01 MARINA EAST         ME
+            REGION_N REGION_C                       geometry
+4052  CENTRAL REGION       CR LINESTRING (31889.45 30760....
+9668  CENTRAL REGION       CR LINESTRING (32768.57 30857....
+20076 CENTRAL REGION       CR LINESTRING (32815.21 30873....
+21690 CENTRAL REGION       CR LINESTRING (32365.45 30845....
+26543 CENTRAL REGION       CR LINESTRING (31611.63 30720....
+29808 CENTRAL REGION       CR LINESTRING (31611.63 30720....
+32774 CENTRAL REGION       CR LINESTRING (32760.29 30815....
+32776 CENTRAL REGION       CR LINESTRING (32896.4 29458.3...
+34199 CENTRAL REGION       CR LINESTRING (31465.24 30707....
+39013 CENTRAL REGION       CR LINESTRING (32876.69 29480....</code></pre>
 </div>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check which points are within the outlined area</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>points_within_area <span class="ot">&lt;-</span> <span class="fu">st_intersection</span>(sg_road, mpsz2019)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>points_within_sg[<span class="fu">rowSums</span>(<span class="fu">is.na</span>(points_within_sg))<span class="sc">!=</span><span class="dv">0</span>,]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple feature collection with 239810 features and 16 fields
+Geometry type: GEOMETRY
+Dimension:     XY
+Bounding box:  xmin: 2679.373 ymin: 15901.59 xmax: 56022.44 ymax: 50220.06
+Projected CRS: SVY21 / Singapore TM
+First 10 features:
+         osm_id code        fclass           name  ref oneway maxspeed layer
+4052   23946437 5122   residential      Rhu Cross &lt;NA&gt;      F       50     0
+9668   32605139 5131 motorway_link           &lt;NA&gt; &lt;NA&gt;      F       40     0
+20076  46337834 5131 motorway_link           &lt;NA&gt; &lt;NA&gt;      F       50    -2
+29808  99007260 5131 motorway_link           &lt;NA&gt; &lt;NA&gt;      F       50     1
+45723 140562813 5131 motorway_link           &lt;NA&gt; &lt;NA&gt;      F       70    -1
+45728 140562819 5131 motorway_link           &lt;NA&gt; &lt;NA&gt;      F       50     0
+45731 140562823 5131 motorway_link           &lt;NA&gt; &lt;NA&gt;      F       60    -2
+45733 140562826 5131 motorway_link           &lt;NA&gt; &lt;NA&gt;      F       40     0
+52966 150819034 5141       service Bay East Drive &lt;NA&gt;      B        0     0
+84664 174717984 5153       footway           &lt;NA&gt; &lt;NA&gt;      B        0     0
+      bridge tunnel   SUBZONE_N SUBZONE_C  PLN_AREA_N PLN_AREA_C       REGION_N
+4052       F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+9668       F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+20076      F      T MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+29808      T      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+45723      F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+45728      F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+45731      F      T MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+45733      F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+52966      F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+84664      F      F MARINA EAST    MESZ01 MARINA EAST         ME CENTRAL REGION
+      REGION_C                       geometry
+4052        CR LINESTRING (31889.45 30760....
+9668        CR LINESTRING (32768.57 30857....
+20076       CR LINESTRING (32815.21 30873....
+29808       CR LINESTRING (31611.63 30720....
+45723       CR LINESTRING (32782.42 30754....
+45728       CR LINESTRING (32645.37 30683....
+45731       CR LINESTRING (32809.68 30108....
+45733       CR LINESTRING (32609.11 30700....
+52966       CR LINESTRING (32173.46 30036....
+84664       CR LINESTRING (31750.06 30644....</code></pre>
 </div>
+</div>
+</section>
+</section>
+<section id="data-pre-processing---grab-posisi-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="data-pre-processing---grab-posisi-dataset">3.3 Data Pre-processing - Grab-Posisi Dataset</h2>
+</section>
 </section>
 <section id="getting-grab-origin-locations" class="level1">
 <h1>Getting Grab Origin Locations</h1>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>origin_df <span class="ot">&lt;-</span> grab_df <span class="sc">%&gt;%</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(trj_id) <span class="sc">%&gt;%</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(pingtimestamp) <span class="sc">%&gt;%</span> </span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">row_number</span>()<span class="sc">==</span><span class="dv">1</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">weekday =</span> <span class="fu">wday</span>(pingtimestamp,</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>                        <span class="at">label=</span><span class="cn">TRUE</span>,</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>                        <span class="at">abbr=</span><span class="cn">TRUE</span>),</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">start_hr =</span> <span class="fu">factor</span>(<span class="fu">hour</span>(pingtimestamp)),</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">day =</span> <span class="fu">factor</span>(<span class="fu">mday</span>(pingtimestamp)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>origin_df <span class="ot">&lt;-</span> grab_df <span class="sc">%&gt;%</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(trj_id) <span class="sc">%&gt;%</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(pingtimestamp) <span class="sc">%&gt;%</span> </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">row_number</span>()<span class="sc">==</span><span class="dv">1</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">weekday =</span> <span class="fu">wday</span>(pingtimestamp,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>                        <span class="at">label=</span><span class="cn">TRUE</span>,</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>                        <span class="at">abbr=</span><span class="cn">TRUE</span>),</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">start_hr =</span> <span class="fu">factor</span>(<span class="fu">hour</span>(pingtimestamp)),</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">day =</span> <span class="fu">factor</span>(<span class="fu">mday</span>(pingtimestamp)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -403,20 +701,20 @@ $ geometry   &lt;MULTIPOLYGON [m]&gt; MULTIPOLYGON (((33222.98 29..., MULTIPOLYG
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>origin_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(origin_df, </span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"rawlng"</span>, <span class="st">"rawlat"</span>),</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">crs=</span><span class="dv">4326</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>origin_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(origin_df, </span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">"rawlng"</span>, <span class="st">"rawlat"</span>),</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">crs=</span><span class="dv">4326</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sg_boundary <span class="ot">&lt;-</span> mpsz2019 <span class="sc">%&gt;%</span> <span class="fu">st_union</span>()</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(sg_boundary)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>sg_boundary <span class="ot">&lt;-</span> mpsz2019_new <span class="sc">%&gt;%</span> <span class="fu">st_union</span>()</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(sg_boundary)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -425,7 +723,7 @@ $ geometry   &lt;MULTIPOLYGON [m]&gt; MULTIPOLYGON (((33222.98 29..., MULTIPOLYG
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>points_within_area[points_within_area<span class="sc">$</span><span class="st">"SUBZONE_N"</span> <span class="sc">==</span> <span class="st">"MARINA EAST"</span>, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>points_within_sg[points_within_sg<span class="sc">$</span><span class="st">"SUBZONE_N"</span> <span class="sc">==</span> <span class="st">"MARINA EAST"</span>, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>Simple feature collection with 209 features and 16 fields
@@ -472,8 +770,8 @@ First 10 features:
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>subzones <span class="ot">&lt;-</span> <span class="fu">unique</span>(points_within_area<span class="sc">$</span><span class="st">"SUBZONE_N"</span>)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>subzones</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>subzones <span class="ot">&lt;-</span> <span class="fu">unique</span>(points_within_sg<span class="sc">$</span><span class="st">"SUBZONE_N"</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>subzones</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>  [1] "MARINA EAST"                   "INSTITUTION HILL"             
@@ -647,42 +945,42 @@ First 10 features:
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mpsz2019)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mpsz2019_new)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>tp <span class="ot">&lt;-</span> mpsz2019 <span class="sc">%&gt;%</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(PLN_AREA_N <span class="sc">==</span> <span class="st">"TAMPINES"</span>)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(tp) <span class="sc">+</span> <span class="fu">tm_polygons</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>tp <span class="ot">&lt;-</span> mpsz2019_new <span class="sc">%&gt;%</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(PLN_AREA_N <span class="sc">==</span> <span class="st">"TAMPINES"</span>)</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(tp) <span class="sc">+</span> <span class="fu">tm_polygons</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(tp) <span class="sc">+</span> </span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_polygons</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(tp) <span class="sc">+</span> </span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_polygons</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid" width="672"></p>
 </div>
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(origin_sf) <span class="sc">+</span> </span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_dots</span>() <span class="sc">+</span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(points_within_area[points_within_area<span class="sc">$</span><span class="st">"SUBZONE_N"</span> <span class="sc">==</span> <span class="st">"TAMPINES EAST"</span>, ]) <span class="sc">+</span> </span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_lines</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(origin_sf) <span class="sc">+</span> </span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_dots</span>() <span class="sc">+</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(points_within_sg[points_within_sg<span class="sc">$</span><span class="st">"SUBZONE_N"</span> <span class="sc">==</span> <span class="st">"TAMPINES EAST"</span>, ]) <span class="sc">+</span> </span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_lines</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-14-2.png" class="img-fluid" width="672"></p>
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-23-2.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -691,8 +989,8 @@ First 10 features:
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>origin_ppp <span class="ot">&lt;-</span> <span class="fu">as.ppp</span>(origin_sf)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(origin_ppp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>origin_ppp <span class="ot">&lt;-</span> <span class="fu">as.ppp</span>(origin_sf)</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(origin_ppp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>Marked planar point pattern:  28000 points
@@ -717,23 +1015,23 @@ Window area = 1130760000 square units</code></pre>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>sg_owin <span class="ot">&lt;-</span> <span class="fu">as.owin</span>(sg_boundary)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>sg_owin <span class="ot">&lt;-</span> <span class="fu">as.owin</span>(sg_boundary)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>originSG_ppp <span class="ot">=</span> origin_ppp[sg_owin]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>originSG_ppp <span class="ot">=</span> origin_ppp[sg_owin]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(originSG_ppp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(originSG_ppp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>Marked planar point pattern:  28000 points
-Average intensity 3.567861e-05 points per square unit
+<pre><code>Marked planar point pattern:  27875 points
+Average intensity 4.194272e-05 points per square unit
 
 Coordinates are given to 3 decimal places
 i.e. rounded to the nearest multiple of 0.001 units
@@ -741,104 +1039,52 @@ i.e. rounded to the nearest multiple of 0.001 units
 marks are of type 'character'
 Summary:
    Length     Class      Mode 
-    28000 character character 
+    27875 character character 
 
 Window: polygonal boundary
-89 separate polygons (44 holes)
+37 separate polygons (29 holes)
                   vertices         area relative.area
-polygon 1            15307  7.00834e+08      8.93e-01
-polygon 2              285  1.61128e+06      2.05e-03
-polygon 3              719  5.40368e+07      6.89e-02
-polygon 4               44  2.26577e+03      2.89e-06
-polygon 5               27  1.50315e+04      1.92e-05
-polygon 6              706  1.28815e+07      1.64e-02
-polygon 7 (hole)        41 -4.01660e+04     -5.12e-05
-polygon 8 (hole)       317 -5.11280e+04     -6.51e-05
-polygon 9 (hole)         3 -3.42709e-01     -4.37e-10
-polygon 10              77  3.29939e+05      4.20e-04
-polygon 11 (hole)        3 -4.14099e-04     -5.28e-13
-polygon 12              30  2.80002e+04      3.57e-05
-polygon 13 (hole)        4 -2.86396e-01     -3.65e-10
-polygon 14 (hole)        3 -1.81439e-04     -2.31e-13
-polygon 15 (hole)        3 -8.68789e-04     -1.11e-12
-polygon 16 (hole)        3 -5.99535e-04     -7.64e-13
-polygon 17 (hole)        3 -3.04561e-04     -3.88e-13
-polygon 18 (hole)        3 -4.46076e-04     -5.68e-13
-polygon 19 (hole)        3 -3.39794e-04     -4.33e-13
-polygon 20 (hole)        3 -4.52043e-05     -5.76e-14
-polygon 21 (hole)        3 -3.90173e-05     -4.97e-14
-polygon 22 (hole)        3 -9.59850e-05     -1.22e-13
-polygon 23 (hole)        4 -2.54488e-04     -3.24e-13
-polygon 24 (hole)        4 -4.28453e-01     -5.46e-10
-polygon 25 (hole)        4 -2.18616e-04     -2.79e-13
-polygon 26 (hole)        5 -2.44411e-04     -3.11e-13
-polygon 27 (hole)        5 -3.64686e-02     -4.65e-11
-polygon 28              71  8.18750e+03      1.04e-05
-polygon 29 (hole)        6 -8.37554e-01     -1.07e-09
-polygon 30 (hole)       38 -7.79904e+03     -9.94e-06
-polygon 31 (hole)        3 -3.41897e-05     -4.36e-14
-polygon 32 (hole)        3 -3.65499e-03     -4.66e-12
-polygon 33 (hole)        3 -4.95057e-02     -6.31e-11
-polygon 34              91  1.49663e+04      1.91e-05
-polygon 35 (hole)        3 -3.79135e-02     -4.83e-11
-polygon 36 (hole)        5 -2.92235e-04     -3.72e-13
-polygon 37 (hole)        3 -7.43616e-06     -9.48e-15
-polygon 38 (hole)      270 -1.21455e+03     -1.55e-06
-polygon 39 (hole)       19 -4.39650e+00     -5.60e-09
-polygon 40 (hole)       35 -1.38385e+02     -1.76e-07
-polygon 41 (hole)       23 -1.99656e+01     -2.54e-08
-polygon 42              40  1.38607e+04      1.77e-05
-polygon 43 (hole)       41 -6.00381e+03     -7.65e-06
-polygon 44 (hole)        7 -1.40546e-01     -1.79e-10
-polygon 45 (hole)       11 -8.36705e+01     -1.07e-07
-polygon 46 (hole)        3 -2.33435e-03     -2.97e-12
-polygon 47              45  2.51218e+03      3.20e-06
-polygon 48             139  3.22293e+03      4.11e-06
-polygon 49             148  3.10395e+03      3.96e-06
-polygon 50 (hole)        4 -1.72650e-04     -2.20e-13
-polygon 51              75  1.73526e+04      2.21e-05
-polygon 52              83  5.28920e+03      6.74e-06
-polygon 53             211  4.70521e+05      6.00e-04
-polygon 54             106  3.04104e+03      3.88e-06
-polygon 55             264  1.50631e+06      1.92e-03
-polygon 56              71  5.63061e+03      7.17e-06
-polygon 57              10  1.99717e+02      2.54e-07
-polygon 58 (hole)        3 -1.37223e-02     -1.75e-11
-polygon 59             487  2.06117e+06      2.63e-03
-polygon 60             155  2.67502e+05      3.41e-04
-polygon 61            1020  1.27781e+06      1.63e-03
-polygon 62 (hole)       12 -5.81913e-01     -7.41e-10
-polygon 63 (hole)        4 -6.55702e-01     -8.36e-10
-polygon 64 (hole)        4 -3.13199e-05     -3.99e-14
-polygon 65 (hole)        3 -3.15099e-05     -4.02e-14
-polygon 66              65  8.42861e+04      1.07e-04
-polygon 67 (hole)        3 -1.20875e-01     -1.54e-10
-polygon 68              47  3.82087e+04      4.87e-05
-polygon 69               6  4.50259e+02      5.74e-07
-polygon 70             129  9.53761e+04      1.22e-04
-polygon 71 (hole)        3 -3.23305e-04     -4.12e-13
-polygon 72               4  2.69313e+02      3.43e-07
-polygon 73            1045  4.44510e+06      5.66e-03
-polygon 74              22  6.74651e+03      8.60e-06
-polygon 75              59  3.43150e+04      4.37e-05
-polygon 76              14  5.86546e+03      7.47e-06
-polygon 77              94  5.96187e+04      7.60e-05
-polygon 78             234  2.08755e+06      2.66e-03
-polygon 79              10  4.90942e+02      6.26e-07
-polygon 80             232  4.72886e+05      6.03e-04
-polygon 81 (hole)       13 -3.91907e+02     -4.99e-07
-polygon 82              15  4.03300e+04      5.14e-05
-polygon 83             227  1.10308e+06      1.41e-03
-polygon 84              10  6.60195e+03      8.41e-06
-polygon 85              19  3.09221e+04      3.94e-05
-polygon 86             145  9.61782e+05      1.23e-03
-polygon 87              30  4.28933e+03      5.47e-06
-polygon 88              37  1.29481e+04      1.65e-05
-polygon 89               4  9.47108e+01      1.21e-07
-enclosing rectangle: [2667.54, 56396.44] x [15748.72, 50256.33] units
-                     (53730 x 34510 units)
-Window area = 784784000 square units
-Fraction of frame area: 0.423</code></pre>
+polygon 1            12666  6.63014e+08      9.98e-01
+polygon 2              285  1.61128e+06      2.42e-03
+polygon 3               27  1.50315e+04      2.26e-05
+polygon 4 (hole)        41 -4.01660e+04     -6.04e-05
+polygon 5 (hole)       317 -5.11280e+04     -7.69e-05
+polygon 6 (hole)         3 -4.14099e-04     -6.23e-13
+polygon 7               30  2.80002e+04      4.21e-05
+polygon 8 (hole)         4 -2.86396e-01     -4.31e-10
+polygon 9 (hole)         3 -1.81439e-04     -2.73e-13
+polygon 10 (hole)        3 -8.68789e-04     -1.31e-12
+polygon 11 (hole)        3 -5.99535e-04     -9.02e-13
+polygon 12 (hole)        3 -3.04561e-04     -4.58e-13
+polygon 13 (hole)        3 -4.46076e-04     -6.71e-13
+polygon 14 (hole)        3 -3.39794e-04     -5.11e-13
+polygon 15 (hole)        3 -4.52043e-05     -6.80e-14
+polygon 16 (hole)        3 -3.90173e-05     -5.87e-14
+polygon 17 (hole)        3 -9.59850e-05     -1.44e-13
+polygon 18 (hole)        4 -2.54488e-04     -3.83e-13
+polygon 19 (hole)        4 -4.28453e-01     -6.45e-10
+polygon 20 (hole)        4 -2.18616e-04     -3.29e-13
+polygon 21 (hole)        5 -2.44411e-04     -3.68e-13
+polygon 22 (hole)        5 -3.64686e-02     -5.49e-11
+polygon 23              71  8.18750e+03      1.23e-05
+polygon 24 (hole)        6 -8.37554e-01     -1.26e-09
+polygon 25 (hole)       38 -7.79904e+03     -1.17e-05
+polygon 26 (hole)        3 -3.41897e-05     -5.14e-14
+polygon 27 (hole)        3 -3.65499e-03     -5.50e-12
+polygon 28 (hole)        3 -4.95057e-02     -7.45e-11
+polygon 29              91  1.49663e+04      2.25e-05
+polygon 30 (hole)        5 -2.92235e-04     -4.40e-13
+polygon 31 (hole)        3 -7.43616e-06     -1.12e-14
+polygon 32 (hole)      270 -1.21455e+03     -1.83e-06
+polygon 33 (hole)       19 -4.39650e+00     -6.62e-09
+polygon 34 (hole)       35 -1.38385e+02     -2.08e-07
+polygon 35 (hole)       23 -1.99656e+01     -3.00e-08
+polygon 36              71  5.63061e+03      8.47e-06
+polygon 37              10  1.99717e+02      3.01e-07
+enclosing rectangle: [2667.54, 55941.94] x [21448.47, 50256.33] units
+                     (53270 x 28810 units)
+Window area = 664597000 square units
+Fraction of frame area: 0.433</code></pre>
 </div>
 </div>
 </section>
@@ -847,16 +1093,16 @@ Fraction of frame area: 0.423</code></pre>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check for any duplicates</span></span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">any</span>(<span class="fu">duplicated</span>(originSG_ppp))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check for any duplicates</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="fu">any</span>(<span class="fu">duplicated</span>(originSG_ppp))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] FALSE</code></pre>
 </div>
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Count the number of duplicates</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">multiplicity</span>(originSG_ppp) <span class="sc">&gt;</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Count the number of duplicates</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">multiplicity</span>(originSG_ppp) <span class="sc">&gt;</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0</code></pre>
@@ -869,25 +1115,25 @@ Fraction of frame area: 0.423</code></pre>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>originSG_ppp.km <span class="ot">&lt;-</span> <span class="fu">rescale</span>(originSG_ppp, <span class="dv">1000</span>, <span class="st">"km"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>originSG_ppp.km <span class="ot">&lt;-</span> <span class="fu">rescale</span>(originSG_ppp, <span class="dv">1000</span>, <span class="st">"km"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>kde_originSG_bw <span class="ot">&lt;-</span> <span class="fu">density</span>(originSG_ppp.km,</span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>                              <span class="at">sigma=</span>bw.ppl,</span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>                              <span class="at">edge=</span><span class="cn">TRUE</span>,</span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>                            <span class="at">kernel=</span><span class="st">"gaussian"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>kde_originSG_bw <span class="ot">&lt;-</span> <span class="fu">density</span>(originSG_ppp.km,</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>                              <span class="at">sigma=</span>bw.ppl,</span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>                              <span class="at">edge=</span><span class="cn">TRUE</span>,</span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a>                            <span class="at">kernel=</span><span class="st">"gaussian"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(kde_originSG_bw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(kde_originSG_bw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-31-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -896,11 +1142,11 @@ Fraction of frame area: 0.423</code></pre>
 <div class="cell">
 <details>
 <summary>Show code</summary>
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>kde_originSG_800 <span class="ot">&lt;-</span> <span class="fu">density</span>(originSG_ppp.km, <span class="at">sigma=</span><span class="fl">0.8</span>, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>)</span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(kde_originSG_800)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>kde_originSG_800 <span class="ot">&lt;-</span> <span class="fu">density</span>(originSG_ppp.km, <span class="at">sigma=</span><span class="fl">0.8</span>, <span class="at">edge=</span><span class="cn">TRUE</span>, <span class="at">kernel=</span><span class="st">"gaussian"</span>)</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(kde_originSG_800)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid" width="672"></p>
+<p><img src="Take-home_Ex01_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>4 dense population, north south east west segment them then re analyse</p>

@@ -11,34 +11,49 @@ execute:
 date: "`r Sys.Date()`"
 ---
 
-WIP \# Objective We will be applying appropriate spatial point patterns analysis methods learned in class to discover the geographical and spatio-temporal distribution of Grab hailing services locations in Singapore.
+# 1. Objective
 
-# Getting Started
+We will be applying appropriate spatial point patterns analysis methods learned in class to discover the geographical and spatio-temporal distribution of Grab hailing services locations in Singapore.
 
-## Loading R packages
+# 2. Getting Started
 
-The R packages that we will be using in this exercise are as follows: 
-- arrow: For reading parquet files (Grab-Posisi Dataset) 
-- lubridate: To handle the date formatting 
-- sf: Import, manage and process vector-based geospatial data in R. 
-- spatstat: Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer. 
-- tidyverse 
-- spNetwork 
-- tmap 
-- classInt 
-- viridis
-- raster
+## 2.1 Loading R packages
 
+The R packages that we will be using in this exercise are as follows:
+
+-   **arrow:** For reading parquet files (Grab-Posisi Dataset)
+
+-   **lubridate:** To handle the date formatting
+
+-   **sf:** Import, manage and process vector-based geospatial data in R.
+
+-   **tidyverse:** a collection of packages for data science tasks
+
+-   **spatstat:** Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer.
+
+-   **spNetwork**
+
+-   **tmap:** Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
+
+-   **classInt**
+
+-   **viridis**
+
+-   **raster**
 
 ```{r}
-pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, classInt, viridis, spatstat, raster)
+pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, 
+               classInt, viridis, spatstat, raster)
 ```
 
-## Importing the datasets
+## 2.2 Importing the datasets
 
-The datasets that we will be using are: - Grab-Posisi (Aspatial) - Road data set from OpenStreetMap - Master Plan 2019 Subzone Boundary (No Sea) from Data.gov.sg
+The datasets that we will be using are as follow:
 
-# Grab-Posisi Dataset
+::: panel-tabset
+## Grab-Posisi Dataset
+
+Using *`read_parquet()`* function from **arrow** package to import the grab data, then changing pingtimestamp column to datetime object
 
 ```{r}
 grab_df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
@@ -46,26 +61,150 @@ grab_df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
 grab_df$pingtimestamp <- as_datetime(grab_df$pingtimestamp)
 ```
 
-# OpenStreetMap Road Dataset
+## OpenStreetMap Road Dataset
+
+Transforming the coordinate system at the same time when we are importing the data
+
 ```{r}
 sg_road <- st_read(dsn = "data/geospatial", layer = "gis_osm_roads_free_1") %>% st_transform(crs = 3414)
-st_crs(sg_road)
 ```
 
-# Master Plan 2019 Subzone Boundary (No Sea) Dataset
+## Master Plan 2019 Subzone Boundary Dataset
+
+Transforming the coordinate system at the same time when we are importing the data
+
 ```{r}
 mpsz2019 <- st_read("data/geospatial", layer = "MPSZ-2019") %>% st_transform(crs = 3414)
 ```
+:::
+
+# **3. Geospatial Data Wrangling**
+
+Before we begin exploring the data, we will first need to perform some data pre-processing on the datasets that we have imported.
+
+## 3.1 Data Pre-processing - MPSZ2019
+
+### 3.1.1 Excluding Outer Islands
+
+As grab won't be able to reach offshore places, we will exclude the outer islands from this dataset. We will do this through the following steps:
+
+::: panel-tabset
+## Finding the islands
+
+We will first take a look at the unique planning areas in Singapore using unique() on the PLN_AREA_N column of mpsz2019 dataset.
 
 ```{r}
-glimpse(mpsz2019)
+unique(mpsz2019$PLN_AREA_N)
+plot(mpsz2019)
+```
+
+Note that there are 3 areas with island in their name, mainly "NORTH-EASTERN ISLANDS", "SOUTHERN ISLANDS", and "WESTERN ISLANDS".
+
+## Excluding the islands
+
+To exclude the islands, we simply have to pass a condition to exclude these islands in the subset function.
+
+```{r}
+mpsz2019_new <- subset(mpsz2019, !(PLN_AREA_N %in% 
+            c("NORTH-EASTERN ISLANDS", "SOUTHERN ISLANDS", "WESTERN ISLANDS")))
+```
+
+## Checking out the difference
+
+Great! Now let's check if we indeed removed the maps!
+
+```{r}
+tmap_mode('plot')
+before <- tm_shape(mpsz2019) +
+  tm_polygons("PLN_AREA_N") +
+  tmap_options(max.categories = 53)
+after <- tm_shape(mpsz2019_new) +
+  tm_polygons("PLN_AREA_N") +
+  tmap_options(max.categories = 53)
+
+tmap_arrange(before, after)
+```
+:::
+
+### 3.1.2 Invalid Geometries
+
+We will be using the *`st_is_valid()`* function to test for invalid geometries.
+
+```{r}
+test <- st_is_valid(mpsz2019_new,reason=TRUE)
+
+# Number of invalid geometries
+length(which(test!= "Valid Geometry"))
+
+# Reason
+test[which(test!= "Valid Geometry")]
+```
+
+We can see that there are 3 invalid geometries. Let's fix them using *`st_make_valid()`*.
+
+```{r}
+mpsz2019_new<- st_make_valid(mpsz2019_new)
+length(which(st_is_valid(mpsz2019_new) == FALSE))
+```
+
+### 3.1.3 **Missing Values**
+
+```{r}
+mpsz2019_new[rowSums(is.na(mpsz2019_new))!=0,]
+```
+
+Using the code above, we can see that there are no missing values.
+
+### 3.1.4 **Creating boundary?**
+
+## 3.2 Data Pre-processing - OpenStreetMap Road Dataset
+
+### 3.2.1 Limiting the dataset
+
+As the dataset contains data from Malaysia and Brunei as well, we will use *`st_intersection()`* to limit the data to only Singapore.
+
+```{r}
+points_within_sg <- st_intersection(sg_road, mpsz2019)
+```
+
+Now, we can see that in points_within_sg it only contain Singapore road data, combined with the other values from mpsz2019 like "PLN_AREA_N" used above.
+
+```{r}
+colnames(points_within_sg)
+
+head(points_within_sg)
+```
+
+### 3.2.2 Invalid Geometries
+
+Again, using the *`st_is_valid()`* function to test for invalid geometries.
+
+```{r}
+test <- st_is_valid(points_within_sg,reason=TRUE)
+
+# Number of invalid geometries
+length(which(test!= "Valid Geometry"))
+
+# Reason
+test[which(test!= "Valid Geometry")]
+```
+
+No invalid geometries!
+
+### 3.2.3 **Missing Values**
+
+```{r}
+points_within_sg
 ```
 
 ```{r}
-# Check which points are within the outlined area
-points_within_area <- st_intersection(sg_road, mpsz2019)
+points_within_sg[rowSums(is.na(points_within_sg))!=0,]
 ```
+
+## 3.3 Data Pre-processing - Grab-Posisi Dataset
+
 # Getting Grab Origin Locations
+
 ```{r}
 origin_df <- grab_df %>%
   group_by(trj_id) %>%
@@ -79,6 +218,7 @@ origin_df <- grab_df %>%
 ```
 
 # Grab Origin SF
+
 ```{r}
 origin_sf <- st_as_sf(origin_df, 
                        coords = c("rawlng", "rawlat"),
@@ -87,26 +227,27 @@ origin_sf <- st_as_sf(origin_df,
 ```
 
 ```{r}
-sg_boundary <- mpsz2019 %>% st_union()
+sg_boundary <- mpsz2019_new %>% st_union()
 plot(sg_boundary)
 ```
 
 # Playing with points_within_area file
+
 ```{r}
-points_within_area[points_within_area$"SUBZONE_N" == "MARINA EAST", ]
+points_within_sg[points_within_sg$"SUBZONE_N" == "MARINA EAST", ]
 ```
 
 ```{r}
-subzones <- unique(points_within_area$"SUBZONE_N")
+subzones <- unique(points_within_sg$"SUBZONE_N")
 subzones
 ```
 
 ```{r}
-plot(mpsz2019)
+plot(mpsz2019_new)
 ```
 
 ```{r}
-tp <- mpsz2019 %>%
+tp <- mpsz2019_new %>%
   filter(PLN_AREA_N == "TAMPINES")
 
 tm_shape(tp) + tm_polygons()
@@ -117,11 +258,12 @@ tm_shape(tp) +
 tm_polygons()
 tm_shape(origin_sf) + 
 tm_dots() +
-tm_shape(points_within_area[points_within_area$"SUBZONE_N" == "TAMPINES EAST", ]) + 
+tm_shape(points_within_sg[points_within_sg$"SUBZONE_N" == "TAMPINES EAST", ]) + 
 tm_lines()
 ```
 
 # Creating point ppp objects from origin
+
 ```{r}
 origin_ppp <- as.ppp(origin_sf)
 summary(origin_ppp)
@@ -129,6 +271,7 @@ summary(origin_ppp)
 ```
 
 # Creating owin object
+
 ```{r}
 sg_owin <- as.owin(sg_boundary)
 ```
@@ -142,6 +285,7 @@ summary(originSG_ppp)
 ```
 
 # Checking for duplicates
+
 ```{r}
 # Check for any duplicates
 any(duplicated(originSG_ppp))
@@ -153,6 +297,7 @@ sum(multiplicity(originSG_ppp) > 1)
 Can see that no duplicates.
 
 # Rescale
+
 ```{r}
 originSG_ppp.km <- rescale(originSG_ppp, 1000, "km")
 
@@ -168,10 +313,12 @@ kde_originSG_bw <- density(originSG_ppp.km,
 ```{r}
 plot(kde_originSG_bw)
 ```
+
 # Computing KDE by using fixed bandwidth
+
 ```{r}
 kde_originSG_800 <- density(originSG_ppp.km, sigma=0.8, edge=TRUE, kernel="gaussian")
 plot(kde_originSG_800)
 ```
-4 dense population, north south east west
-segment them then re analyse
+
+4 dense population, north south east west segment them then re analyse
