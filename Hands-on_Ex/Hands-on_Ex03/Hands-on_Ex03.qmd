@@ -141,7 +141,7 @@ sg_sp <- as(sg, "SpatialPolygons")
 Now, we will use as.ppp() function of spatstat to convert the spatial data into spatstat's ppp object format.
 
 ```{r}
-childcare_ppp <- as(childcare_sp, "ppp")
+childcare_ppp <- as.ppp(childcare_sp)
 ```
 
 TL:DR: sf data frames -\> Spatial\* class -\> generic sp format -\> spatstat's ppp format

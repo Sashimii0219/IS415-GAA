@@ -31,19 +31,19 @@ The R packages that we will be using in this exercise are as follows:
 
 -   **spatstat:** Wide range of useful functions for point pattern analysis and derive kernel density estimation (KDE) layer.
 
--   **spNetwork**
+-   **spNetwork:** provides functions to perform Spatial Point Patterns Analysis such as kernel density estimation (KDE) and K-function on network. It also can be used to build spatial matrices ('listw' objects like in 'spdep' package) to conduct any kind of traditional spatial analysis with spatial weights based on reticular distances.
 
 -   **tmap:** Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
 
--   **classInt**
+-   **raster: r**eads, writes, manipulates, analyses and model of gridded spatial data (i.e. raster). In this hands-on exercise, it will be used to convert image output generate by spatstat into raster format.
 
--   **viridis**
+-   maptools: Provides a set of tools for manipulating geographic data. In this take-home exercise, we mainly use it to convert Spatial objects into ppp format of spatstat.
 
--   **raster**
+-   \# classInt, viridis, rgdal
 
 ```{r}
 pacman::p_load(arrow, lubridate, sf, tidyverse, spNetwork, tmap, 
-               classInt, viridis, spatstat, raster)
+               spatstat, raster, maptools)
 ```
 
 ## 2.2 Importing the datasets
@@ -66,7 +66,7 @@ grab_df$pingtimestamp <- as_datetime(grab_df$pingtimestamp)
 Transforming the coordinate system at the same time when we are importing the data
 
 ```{r}
-sg_road <- st_read(dsn = "data/geospatial", layer = "gis_osm_roads_free_1") %>% st_transform(crs = 3414)
+sg_roads <- st_read(dsn = "data/geospatial", layer = "gis_osm_roads_free_1") %>% st_transform(crs = 3414)
 ```
 
 ## Master Plan 2019 Subzone Boundary Dataset
@@ -157,6 +157,11 @@ Using the code above, we can see that there are no missing values.
 
 ### 3.1.4 **Creating boundary?**
 
+```{r}
+sg_boundary <- mpsz2019_new %>% st_union()
+plot(sg_boundary)
+```
+
 ## 3.2 Data Pre-processing - OpenStreetMap Road Dataset
 
 ### 3.2.1 Limiting the dataset
@@ -164,7 +169,7 @@ Using the code above, we can see that there are no missing values.
 As the dataset contains data from Malaysia and Brunei as well, we will use *`st_intersection()`* to limit the data to only Singapore.
 
 ```{r}
-points_within_sg <- st_intersection(sg_road, mpsz2019)
+points_within_sg <- st_intersection(sg_roads, mpsz2019_new)
 ```
 
 Now, we can see that in points_within_sg it only contain Singapore road data, combined with the other values from mpsz2019 like "PLN_AREA_N" used above.
@@ -191,19 +196,42 @@ test[which(test!= "Valid Geometry")]
 
 No invalid geometries!
 
-### 3.2.3 **Missing Values**
-
-```{r}
-points_within_sg
-```
+### 3.2.3 **Missing Values / Dropping Columns**
 
 ```{r}
 points_within_sg[rowSums(is.na(points_within_sg))!=0,]
 ```
 
+By using the code above, we can see that majority of the missing values are in the **'name'** and **'ref'** column. Therefore, let's drop the irrelevant columns first before we try it again!
+
+```{r}
+sg_roads_new <- points_within_sg[c("osm_id", "code", "fclass", "PLN_AREA_N", "geometry")]
+```
+
+We only kept **"osm_id", "code", "fclass"**, and **"PLN_AREA_N"** columns.
+
+```{r}
+sg_roads_new[rowSums(is.na(sg_roads_new))!=0,]
+```
+
+No more missing values here.
+
+Our map so far:
+
+```{r}
+tm_shape(sg_boundary) +
+  tm_polygons() +
+  tm_shape(sg_roads_new) +
+  tm_lines("PLN_AREA_N")
+```
+
 ## 3.3 Data Pre-processing - Grab-Posisi Dataset
 
-# Getting Grab Origin Locations
+The Grab-Posisi Dataset is an Aspatial dataset, different from the two we prepared above. As such, the pre-processing is slightly different too.
+
+### 3.3.1 Getting the Origin and Destination Locations
+
+The code below is a chain of dplyr pipes to group the trips by their id and extract the first **pingtimestamp** row of each trip in order to get the origin of it.
 
 ```{r}
 origin_df <- grab_df %>%
@@ -217,108 +245,1205 @@ origin_df <- grab_df %>%
          day = factor(mday(pingtimestamp)))
 ```
 
-# Grab Origin SF
+```{r}
+destination_df <- grab_df %>%
+  group_by(trj_id) %>%
+  arrange(desc(pingtimestamp)) %>% 
+  # Same as previous code but desc, so ending location
+  filter(row_number()==1) %>%
+  mutate(weekday = wday(pingtimestamp,
+                        label=TRUE,
+                        abbr=TRUE),
+         end_hr = factor(hour(pingtimestamp)),
+         day = factor(mday(pingtimestamp)))
+```
+
+### 3.3.2 Converting to SF format from Dataframe
+
+We will need the files in SF format first before we can use it for further geospatial analysis.
 
 ```{r}
 origin_sf <- st_as_sf(origin_df, 
                        coords = c("rawlng", "rawlat"),
                        crs=4326) %>%
   st_transform(crs = 3414)
+
+dest_sf <- st_as_sf(destination_df, 
+                       coords = c("rawlng", "rawlat"),
+                       crs=4326) %>%
+  st_transform(crs = 3414)
+```
+
+### 3.3.3 Invalid Geometries
+
+```{r}
+test <- st_is_valid(origin_sf,reason=TRUE)
+length(which(test!= "Valid Geometry"))
+
+test <- st_is_valid(dest_sf,reason=TRUE)
+length(which(test!= "Valid Geometry"))
+```
+
+### 3.3.4 Missing Files
+
+```{r}
+origin_sf[rowSums(is.na(origin_sf))!=0,]
+
+dest_sf[rowSums(is.na(dest_sf))!=0,]
+```
+
+No missing values, we are almost ready.
+
+### 3.3.5 Removing points on the islands
+
+```{r}
+origin_sf_new <- st_intersection(origin_sf, mpsz2019_new)
+dest_sf_new <- st_intersection(dest_sf, mpsz2019_new)
+```
+
+To verify that the points that we removed is indeed from the islands, here's a chunk of code to prove:
+
+```{r}
+# Finding out points removed
+diff_id <- origin_sf$trj_id[!(origin_sf$trj_id %in% origin_sf_new$trj_id)]
+
+# Extracting full information of these points
+outliers <- origin_sf[(origin_sf$trj_id %in% diff_id), ]
+
+# Checking where these places are from
+unique(st_intersection(outliers, mpsz2019)$PLN_AREA_N)
+```
+
+They are indeed from **"WESTERN ISLANDS"** and **"SOUTHERN ISLANDS"**.
+
+### 3.3.6 Dropping Unnecessary Columns
+
+Now that our grab dataset is almost ready, we need to decide which column we should drop. Here are the columns in both origin_sf_new and dest_sf_new:
+
+```{r}
+colnames(origin_sf_new)
+colnames(dest_sf_new)
+```
+
+We will definitely be dropping the columns merged from mpsz2019_new (other than PLN_AREA_N), but what about **"driving_mode", "osname", "speed", "bearing",** and **"accuracy"?** Let's first take a look at them.
+
+::: panel-tabset
+## driving_mode
+
+```{r}
+unique(origin_sf_new$driving_mode)
+```
+
+Seeing that there is only 1 constant in the column, it is safe for us to drop this column.
+
+## osname
+
+```{r}
+unique(origin_sf_new$osname)
+```
+
+There are 2 values, mainly "ios" and "android". Arguments can be made that we can analyse the behavior of both type in terms of using grab hailing services, but that's not what we will doing so we will drop this as well.
+
+## speed
+
+As we are analysing start/stop points, speed will not be a relevant factor hence we will be dropping them.
+
+## bearing
+
+Not relevant as well, hence dropping.
+
+## accuracy
+
+According to research paper published on Grab website, this is the definition of the accuracy column:
+
+*"...the accuracy level roughly indicates the radius of the circle within which the true location lies with a certain probability. The lower the accuracy level, the more precise the reported GPS ping is."*
+
+With that, let's take a look at the distribution of accuracy score.
+
+```{r}
+plot(origin_sf_new$accuracy)
 ```
 
 ```{r}
-sg_boundary <- mpsz2019_new %>% st_union()
-plot(sg_boundary)
+ggplot(origin_sf_new, 
+       aes(x=rownames(origin_sf_new), y=accuracy)) + 
+  geom_point(size = 2)
+
+ggplot(dest_sf_new, 
+       aes(x=rownames(dest_sf_new), y=accuracy)) + 
+  geom_point(size = 2)
 ```
 
-# Playing with points_within_area file
+From the plot, we can see that there are 3 clear outliers with accuracy above 180\~ for origin_sf_new, and 1 for dest_sf_new. Now let's extract these trips.
 
 ```{r}
-points_within_sg[points_within_sg$"SUBZONE_N" == "MARINA EAST", ]
+origin_sf_new[origin_sf_new$accuracy > 180, ]
+dest_sf_new[dest_sf_new$accuracy > 500, ]
 ```
+
+To ensure that our data is of utmost accuracy, we will drop these trips, before we drop the accuracy column as well (as we will not need it anymore).
 
 ```{r}
-subzones <- unique(points_within_sg$"SUBZONE_N")
-subzones
+origin_sf_new <- subset(origin_sf_new, accuracy < 180)
+dest_sf_new <- subset(dest_sf_new, accuracy < 500)
 ```
+:::
+
+With that done, we can now drop the columns that we don't need.
 
 ```{r}
-plot(mpsz2019_new)
+origin_sf_new <- origin_sf_new[, c(1, 4,  8:10, 13, 17)]
+dest_sf_new <- dest_sf_new[, c(1, 4,  8:10, 13, 17)]
 ```
 
-```{r}
-tp <- mpsz2019_new %>%
-  filter(PLN_AREA_N == "TAMPINES")
+### 3.3.7 Duplicated Points
 
-tm_shape(tp) + tm_polygons()
-```
-
-```{r}
-tm_shape(tp) + 
-tm_polygons()
-tm_shape(origin_sf) + 
-tm_dots() +
-tm_shape(points_within_sg[points_within_sg$"SUBZONE_N" == "TAMPINES EAST", ]) + 
-tm_lines()
-```
-
-# Creating point ppp objects from origin
-
-```{r}
-origin_ppp <- as.ppp(origin_sf)
-summary(origin_ppp)
-
-```
-
-# Creating owin object
-
-```{r}
-sg_owin <- as.owin(sg_boundary)
-```
-
-```{r}
-originSG_ppp = origin_ppp[sg_owin]
-```
-
-```{r}
-summary(originSG_ppp)
-```
-
-# Checking for duplicates
+Lastly, let's check for duplicated points on the map.
 
 ```{r}
 # Check for any duplicates
-any(duplicated(originSG_ppp))
+any(duplicated(origin_sf_new))
 
 # Count the number of duplicates
-sum(multiplicity(originSG_ppp) > 1)
+sum(multiplicity(origin_sf_new) > 1)
 ```
 
-Can see that no duplicates.
+No duplicated points!
 
-# Rescale
+## 3.4 **Verifying Coordinate System**
+
+It is important for the data to be in the right coordinate reference system (CRS). In this assignment, all spatial data will be projected in **EPSG:3414**, which is a projected coordinate system for Singapore.
+
+::: panel-tabset
+## mpsz2019_new
+
+```{r}
+st_crs(mpsz2019_new)
+```
+
+## sg_roads_new
+
+```{r}
+st_crs(sg_roads_new)
+```
+
+## origin_sf and dest_sf
+
+```{r}
+st_crs(origin_sf_new)
+
+st_crs(dest_sf_new)
+```
+:::
+
+They are all in the correct CRS!
+
+## 3.5 **Plotting Spatial Data**
+
+Finally, plotting all three datasets together to ensure that they have a consistent projection system.
+
+```{r}
+tm_shape(sg_boundary) +
+  tm_polygons() +
+tm_shape(sg_roads_new) + 
+  tm_lines("PLN_AREA_N") + 
+tm_shape(origin_sf_new) +
+  tm_dots()
+```
+
+## 3.6 Exploratory Data Analysis
+
+Before we begin our Geospatial Analysis, let's first take a closer look at the Grab dataset.
+
+### 3.6.1 Day of the Week
+
+The distribution of the trips across all 7 days of the week looks even.
+
+```{r}
+ggplot(origin_sf_new, aes(x=weekday)) + geom_bar()
+ggplot(dest_sf_new, aes(x=weekday)) + geom_bar()
+```
+
+### 3.6.2 Planning Area
+
+First let us look at the top 10 planning areas for grab ride origin points. Tampines is the Planning Area with the most origin points.
+
+```{r}
+origin_pl_area <- origin_sf_new %>%
+  group_by(PLN_AREA_N) %>%
+  summarise(total_count=n()) %>%
+  top_n(10, total_count) %>%
+  .$PLN_AREA_N
+
+ggplot(origin_sf_new[origin_sf_new$PLN_AREA_N %in% origin_pl_area,], 
+       aes(x=PLN_AREA_N)) + geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Trips Origin Distribution by Planning Area",
+       x = "Planning Area",
+       y = "Number of Trips")
+```
+
+Then for the destination points.
+
+```{r}
+dest_pl_area <- dest_sf_new %>%
+  group_by(PLN_AREA_N) %>%
+  summarise(total_count=n()) %>%
+  top_n(10, total_count) %>%
+  .$PLN_AREA_N
+
+ggplot(dest_sf_new[dest_sf_new$PLN_AREA_N %in% dest_pl_area,], 
+       aes(x=PLN_AREA_N)) + geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Trips Destination Distribution by Planning Area",
+       x = "Planning Area",
+       y = "Number of Trips")
+```
+
+6 out of 10 of the Planning Areas remains the same for destination points, mainly TAMPINES, WOODLANDS, YISHUN, QUEENSTOWN, BUKIT MERAH, and CHANGI. This time however, the Planning Area with the most destination points is Changi.
+
+### 3.6.3 Starting Hour
+
+```{r}
+origin_sf_new$start_hr <- factor(origin_sf_new$start_hr, levels = 0:23)
+
+ggplot(origin_sf_new, aes(x = start_hr)) +
+  geom_bar() +
+  labs(title = "Trips Distribution by Start Hour",
+       x = "Start Hour",
+       y = "Number of Trips")
+```
+
+From the graph, we can see that the starting hour peaks at midnight (12am - 1am) and morning (9am - 10am), the former probably due to the lack of public transport after operating hours, and the latter from rush hour.
+
+# **4. Kernel Density Estimation (KDE) Layers**
+
+## 4.1 Converting data format
+
+### 4.1.1 Creating point ppp objects
+
+In the code chunk below, *`as.ppp()`* function is used to derive a **ppp** object layer directly from a sf tibble data.frame.
+
+```{r}
+origin_ppp <- as.ppp(origin_sf_new)
+summary(origin_ppp)
+
+dest_ppp <- as.ppp(dest_sf_new)
+summary(dest_ppp)
+
+```
+
+### 4.1.2 Creating owin objects
+
+In the code chunk *`as.owin()`* is used to create an **owin** object class from polygon sf tibble data.frame. In this case, we will be converting the sg_boundary polygon.
+
+```{r}
+sg_boundary_owin <- as.owin(sg_boundary)
+```
+
+### 4.1.3 **Combining point events object and owin object**
+
+We will now combine singapore's boundary and the origin and destination points into one.
+
+```{r}
+originSG_ppp = origin_ppp[sg_boundary_owin]
+destSG_ppp = dest_ppp[sg_boundary_owin]
+```
+
+```{r}
+plot(destSG_ppp)
+```
+
+```{r}
+summary(destSG_ppp)
+```
+
+### 4.1.4 Rescale
+
+The density values of the output range from 0 to 0.000035 which is way too small to comprehend, and it is computed in "number of points per square meter". Therefore, we are going to use *`rescale()`* to covert the unit of measurement from meter to kilometer.
 
 ```{r}
 originSG_ppp.km <- rescale(originSG_ppp, 1000, "km")
-
+destSG_ppp.km <- rescale(destSG_ppp, 1000, "km")
 ```
+
+## 4.2 Deriving Traditional Kernel Density Estimation (KDE) Layers
+
+### 4.2.1 Automatic bandwidth selection method
+
+We will first compute the kernel density by using *`density()`* of the **spatstat** package, with the default method bw.diggle().
 
 ```{r}
 kde_originSG_bw <- density(originSG_ppp.km,
                               sigma=bw.ppl,
                               edge=TRUE,
                             kernel="gaussian") 
+
+plot(kde_originSG_bw, main = "Kernel Density Estimation Layer")
+```
+
+Looking at all the different methods, we can see that bw.diggle() is still the best among the automatic bandwidth selection method.
+
+```{r}
+bw.CvL(originSG_ppp.km)
 ```
 
 ```{r}
-plot(kde_originSG_bw)
+bw.scott(originSG_ppp.km)
 ```
-
-# Computing KDE by using fixed bandwidth
 
 ```{r}
-kde_originSG_800 <- density(originSG_ppp.km, sigma=0.8, edge=TRUE, kernel="gaussian")
-plot(kde_originSG_800)
+bw.ppl(originSG_ppp.km)
 ```
 
-4 dense population, north south east west segment them then re analyse
+```{r}
+bw.diggle(originSG_ppp.km)
+```
+
+```{r}
+kde_originSG_ppl <- density(originSG_ppp.km, 
+                               sigma=bw.ppl, 
+                               edge=TRUE,
+                               kernel="gaussian")
+par(mfrow=c(1,2))
+plot(kde_originSG_bw, main = "bw.diggle")
+plot(kde_originSG_ppl, main = "bw.ppl")
+```
+
+### 4.2.2 C**omputing KDE by using fixed bandwidth**
+
+Having tried automatic bandwidth selection method, let's try computing KDE by using a fixed bandwidth defined by us. In our case, we will define a fixed bandwidth of 800m (or 0.8km).
+
+```{r}
+kde_originSG_500 <- density(originSG_ppp.km, sigma=0.5, edge=TRUE, kernel="gaussian")
+plot(kde_originSG_500)
+```
+
+### 4.2.3 C**omputing KDE by using adaptive bandwidth**
+
+Fixed bandwidth method, however, is very sensitive to highly skewed distribution of spatial point patterns over geographical units, for example urban versus rural. To overcome this, we can try using adaptive bandwidth instead.
+
+```{r}
+kde_childcareSG_adaptive <- adaptive.density(originSG_ppp.km, method="kernel")
+plot(kde_childcareSG_adaptive)
+```
+
+### 4.2.4 Method we are using
+
+As the KDE layer using fixed bandwidth with gaussian kernel plots a graph that allows for meaningful analysis at a glance, we will be using that for the steps moving forward.
+
+```{r}
+kde_originSG_500 <- density(originSG_ppp.km, sigma=0.5, edge=TRUE, kernel="gaussian")
+plot(kde_originSG_500)
+
+kde_destSG_500 <- density(destSG_ppp.km, sigma=0.5, edge=TRUE, kernel="gaussian")
+plot(kde_destSG_500)
+
+par(mfrow=c(1,2))
+plot(kde_originSG_500, main = "Origin KDE Layer")
+plot(kde_destSG_500, main = "Destination KDE layer")
+```
+
+## 4.3 Combining KDE layers
+
+### 4.3.1 Converting KDE layers into grid object
+
+In order for us to map the KDE layer of these points to our map, we first need to convert it into grid object.
+
+```{r}
+gridded_kde_originSG_500 <- as.SpatialGridDataFrame.im(kde_originSG_500)
+spplot(gridded_kde_originSG_500)
+
+gridded_kde_destSG_500 <- as.SpatialGridDataFrame.im(kde_destSG_500)
+spplot(gridded_kde_destSG_500)
+```
+
+### 4.3.2 Converting KDE layers into grid object
+
+We will then convert the gridded kernel density objects into RasterLayer object by using *`raster()`* of **raster** package. As the RasterLayer object does not include CRS information, we will need to manually assign it to them as well.
+
+```{r}
+kde_originSG_500_raster <- raster(gridded_kde_originSG_500)
+projection(kde_originSG_500_raster) <- CRS("+init=EPSG:3414 +datum=WGS84 +units=km")
+kde_originSG_500_raster
+
+kde_destSG_500_raster <- raster(gridded_kde_destSG_500)
+projection(kde_destSG_500_raster) <- CRS("+init=EPSG:3414 +datum=WGS84 +units=km")
+kde_destSG_500_raster
+```
+
+### 4.3.3 Overlaying KDE layer on tmap plot
+
+To further explore the map, we will now be overlaying the KDE layer both onto OpenStreetMap of Singapore, and also on the Singapore Planning Area layer and OSM road layer that we have pre-processed.
+
+#### 4.3.3.1 Overlay on OpenStreetMap
+
+::: panel-tabset
+## Origin
+
+```{r}
+tmap_mode("view")
+tm_basemap(leaflet::providers$OpenStreetMap) +
+tm_shape(kde_originSG_500_raster) + 
+  tm_raster("v", alpha = 0.7,
+          palette = "YlOrRd") +
+  tm_layout(legend.position = c("right", "bottom"), frame = FALSE)
+tmap_mode("plot")
+```
+
+## Destination
+
+```{r}
+tmap_mode("view")
+tm_basemap(leaflet::providers$OpenStreetMap) +
+tm_shape(kde_destSG_500_raster) + 
+  tm_raster("v", alpha = 0.7,
+          palette = "YlOrRd") +
+  tm_layout(legend.position = c("right", "bottom"), frame = FALSE)
+tmap_mode("plot")
+```
+:::
+
+As you can see from the plot, there are certain planning areas that are hotspots for hailing of Grab ride service, in particular Central Region (Orchard, Newton etc), Woodlands, Punggol, Tampines, and most notably Changi (where the airport lies).
+
+#### 4.3.3.2 Overlay on Planning Area and OSM Road Layers
+
+To further confirm our observation, let's plot the KDE layer over our Planning Area and OSM Road Layers.
+
+::: panel-tabset
+## Origin
+
+```{r}
+tmap_mode("view")
+tm_shape(mpsz2019_new) +
+  tm_polygons("PLN_AREA_N") +
+tm_shape(kde_originSG_500_raster) + 
+  tm_raster("v", alpha = 0.7,
+          palette = "YlOrRd")
+```
+
+## Destination
+
+```{r}
+tmap_mode("view")
+tm_shape(mpsz2019_new) +
+  tm_polygons("PLN_AREA_N") +
+tm_shape(kde_destSG_500_raster) + 
+  tm_raster("v", alpha = 0.7,
+          palette = "YlOrRd")
+```
+:::
+
+The common overlapping Planning Areas include "TAMPINES", "CHANGI", "WOODLANDS", and "NOVENA", so let's do a further analysis on these areas.
+
+## 4.4 In-depth KDE Computation
+
+### 4.4.1 Data Preparation
+
+To do in-depth KDE computation on these 4 planning areas, we will first need to extract their respective boundaries. In the code below, we extracted their boundaries and converted them to **sp's Spatial\* class.**
+
+```{r}
+mpsz <- as_Spatial(mpsz2019_new)
+cg = mpsz[mpsz@data$PLN_AREA_N == "CHANGI",]
+tp = mpsz[mpsz@data$PLN_AREA_N == "TAMPINES",]
+wl = mpsz[mpsz@data$PLN_AREA_N == "WOODLANDS",]
+nv = mpsz[mpsz@data$PLN_AREA_N == "NOVENA",]
+```
+
+Plotting down these boundaries.
+
+```{r}
+par(mfrow=c(2,2))
+plot(cg, main = "CHANGI")
+plot(tp, main = "TAMPINES")
+plot(wl, main = "WOODLANDS")
+plot(nv, main = "NOVENA")
+```
+
+Turning the spatial point data frame into generic sp format, then into owin object as done previously.
+
+```{r}
+cg_sp = as(cg, "SpatialPolygons")
+tp_sp = as(tp, "SpatialPolygons")
+wl_sp = as(wl, "SpatialPolygons")
+nv_sp = as(nv, "SpatialPolygons")
+
+cg_owin = as(cg_sp, "owin")
+tp_owin = as(tp_sp, "owin")
+wl_owin = as(wl_sp, "owin")
+nv_owin = as(nv_sp, "owin")
+```
+
+By using the code below, we will be able to extract grab origin and destination points for these specific areas.
+
+```{r}
+origin_cg_ppp = origin_ppp[cg_owin]
+origin_tp_ppp = origin_ppp[tp_owin]
+origin_wl_ppp = origin_ppp[wl_owin]
+origin_nv_ppp = origin_ppp[nv_owin]
+
+dest_cg_ppp = dest_ppp[cg_owin]
+dest_tp_ppp = dest_ppp[tp_owin]
+dest_wl_ppp = dest_ppp[wl_owin]
+dest_nv_ppp = dest_ppp[nv_owin]
+```
+
+Next up is the *`rescale()`* function used previously as well.
+
+```{r}
+origin_cg_ppp.km = rescale(origin_cg_ppp, 1000, "km")
+origin_tp_ppp.km = rescale(origin_tp_ppp, 1000, "km")
+origin_wl_ppp.km = rescale(origin_wl_ppp, 1000, "km")
+origin_nv_ppp.km = rescale(origin_nv_ppp, 1000, "km")
+
+dest_cg_ppp.km = rescale(dest_cg_ppp, 1000, "km")
+dest_tp_ppp.km = rescale(dest_tp_ppp, 1000, "km")
+dest_wl_ppp.km = rescale(dest_wl_ppp, 1000, "km")
+dest_nv_ppp.km = rescale(dest_nv_ppp, 1000, "km")
+```
+
+Finally, we plot the four planning areas and the grab hailing origin and destination points
+
+```{r}
+par(mfrow=c(2,4))
+plot(origin_cg_ppp.km, main = "CHANGI ORIGIN")
+plot(origin_tp_ppp.km, main = "TAMPINES ORIGIN")
+plot(origin_wl_ppp.km, main = "WOODLANDS ORIGIN")
+plot(origin_nv_ppp.km, main = "NOVENA ORIGIN")
+
+plot(dest_cg_ppp.km, main = "CHANGI DESTINATION")
+plot(dest_tp_ppp.km, main = "TAMPINES DESTINATION")
+plot(dest_wl_ppp.km, main = "WOODLANDS DESTINATION")
+plot(dest_nv_ppp.km, main = "NOVENA DESTINATION")
+```
+
+### 4.4.2 Computing KDE
+
+We will now be computing the KDE of each planning area using the fixed bandwidth method.
+
+::: panel-tabset
+## 4.4.2.1 Changi
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(density(origin_cg_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Changi Origin")
+
+plot(density(dest_cg_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Changi Destination")
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(mpsz2019_new[mpsz2019_new$PLN_AREA_N == "CHANGI", ]) + 
+  tm_polygons('SUBZONE_N')
+```
+
+The hotspot in Changi area is centered around Changi Airport, indicating a likely surge in use of Grab services due to the constant flow of passengers arriving and departing from Singapore.
+
+## 4.4.2.2 Tampines
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(density(origin_tp_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Tampines Origin")
+
+plot(density(dest_tp_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Tampines Destination")
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(mpsz2019_new[mpsz2019_new$PLN_AREA_N == "TAMPINES", ]) + 
+  tm_polygons('SUBZONE_N')
+```
+
+The hotspot in Tampines area is mainly concentrated around the stretch from Tampines West to Tampines East, encompassing the bulk of where most residents of Tampines currently live (Tampines West, Tampines, Tampines East).
+
+## 4.4.2.3 Woodlands
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(density(origin_wl_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Woodlands Origin")
+
+plot(density(dest_wl_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Woodlands Destination")
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(mpsz2019_new[mpsz2019_new$PLN_AREA_N == "WOODLANDS", ]) + 
+  tm_polygons('SUBZONE_N')
+```
+
+The rides are concentrated around the lower half of Woodlands area, ranging from Woodlands West to Woodlands South, then Woodlands East. However, one prominent hotspot shared across both the origin and destination map is the Woodlands West region, indicating that this might either be the area with the wealthiest residents in Woodlands, or that there are just more residents concentrated here.
+
+## 4.4.2.4 Novena
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(density(origin_nv_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Novena Origin")
+
+plot(density(dest_nv_ppp.km, 
+             sigma=0.5, 
+             edge=TRUE, 
+             kernel="gaussian"),
+     main="Novena Destination")
+```
+
+```{r}
+tmap_mode('plot')
+tm_shape(mpsz2019_new[mpsz2019_new$PLN_AREA_N == "NOVENA", ]) + 
+  tm_polygons('SUBZONE_N')
+```
+
+The Novena area's notable hotspots present an interesting distinction. Origin points predominantly converge around the affluent Moulmein area, revealing a concentration in the wealthier section of town. Conversely, the destination points gravitate towards the Malcolm area, characterized by a cluster of prestigious schools, as illustrated in the figure below.
+
+![Moulmein Area](data/image/Moulmein.png)
+
+![Google Map View of Malcolm Area, characterized by Prestigious Schools](data/image/Novena.png)
+:::
+
+## 4.5 Nearest Neighbour Analysis
+
+In this section, we will perform the Clark-Evans test of aggregation for a spatial point pattern by using clarkevans.test() of statspat package, to test whether the distribution of Grab ride hailing origin points are randomly distributed.
+
+Using 95% confidence interval, the test hypotheses are:
+
+Ho = The distribution of Grab ride hailing origin points are randomly distributed.
+
+H1= The distribution of Grab ride hailing origin points are not randomly distributed.
+
+For this section, we will be making use of the ppp object.
+
+### Clark-Evans Test
+
+::: panel-tabset
+## Singapore
+
+```{r}
+clarkevans.test(originSG_ppp,
+                correction="none",
+                clipregion="sg_owin",
+                alternative=c("clustered"),
+                nsim=99)
+```
+
+## Changi
+
+```{r}
+clarkevans.test(origin_cg_ppp,
+                correction="none",
+                clipregion="sg_owin",
+                alternative=c("clustered"),
+                nsim=99)
+```
+
+## Tampines
+
+```{r}
+clarkevans.test(origin_tp_ppp,
+                correction="none",
+                clipregion="sg_owin",
+                alternative=c("clustered"),
+                nsim=99)
+```
+
+## Woodlands
+
+```{r}
+clarkevans.test(origin_wl_ppp,
+                correction="none",
+                clipregion="sg_owin",
+                alternative=c("clustered"),
+                nsim=99)
+```
+
+## Novena
+
+```{r}
+clarkevans.test(origin_nv_ppp,
+                correction="none",
+                clipregion="sg_owin",
+                alternative=c("clustered"),
+                nsim=99)
+```
+:::
+
+Having performed the Clark-Evans Test on all 4 planning area and Singapore as a whole, all of their p-values are \<2.2e-16 \< 0.05, thus we reject Ho. This means that the distribution of Grab ride hailing origin points are not randomly distributed which we explored in earlier sections.
+
+Furthermore, as their R value ranges from 0.11647 to 0.35838 which is \<1, this suggests that the points are clustering.
+
+# **5.** Network Kernel Density Estimation (NKDE) Layers
+
+In this section, we will be using appropriate functions of spNetwork package:
+
+-   to derive network constrained kernel density estimation (NetKDE), and
+-   to perform network G-function and k-function analysis,
+
+where in this case the network refers to OSM's Road Map of Singapore.
+
+However, due to limitations in computational power, we will be limiting the area of scope down to the 4 areas identified in the previous section, ***Changi, Tampines, Woodlands, and Novena,*** and only the **Origin** points.
+
+## 5.1 Data Preparation
+
+### 5.1.1 Initial Data Pre-processing
+
+Before we begin, let us first convert our sg_roads_new data from SFC_GEOMETRY to SFC_LINESTRING.
+
+```{r}
+sg_roads_linestring <- st_cast(sg_roads_new, "LINESTRING")
+```
+
+### 5.1.2 Narrowing down the scope
+
+Then, let us narrow down the scope of our data to the 4 areas mentioned.
+
+```{r}
+# Roads
+cg_roads <- sg_roads_linestring %>% filter(PLN_AREA_N == "CHANGI")
+tp_roads <- sg_roads_linestring %>% filter(PLN_AREA_N == "TAMPINES")
+wl_roads <- sg_roads_linestring %>% filter(PLN_AREA_N == "WOODLANDS")
+nv_roads <- sg_roads_linestring %>% filter(PLN_AREA_N == "NOVENA")
+
+# Grab Origin Points
+cg_origin <- origin_sf_new %>% filter(PLN_AREA_N == "CHANGI")
+tp_origin <- origin_sf_new %>% filter(PLN_AREA_N == "TAMPINES")
+wl_origin <- origin_sf_new %>% filter(PLN_AREA_N == "WOODLANDS")
+nv_origin <- origin_sf_new %>% filter(PLN_AREA_N == "NOVENA")
+```
+
+### 5.1.3 Visualising the data
+
+Before we begin our analysis, let us visualise our geospatial data to make sure everything falls into place.
+
+::: panel-tabset
+## Changi
+
+```{r}
+tm_shape(cg_roads) +
+  tm_lines("PLN_AREA_N") +
+tm_shape(cg_origin) +
+  tm_dots()
+```
+
+## Tampines
+
+```{r}
+tm_shape(tp_roads) +
+  tm_lines("PLN_AREA_N") +
+tm_shape(tp_origin) +
+  tm_dots()
+```
+
+## Woodlands
+
+```{r}
+tm_shape(wl_roads) +
+  tm_lines("PLN_AREA_N") +
+tm_shape(wl_origin) +
+  tm_dots()
+```
+
+## Novena
+
+```{r}
+tm_shape(nv_roads) +
+  tm_lines("PLN_AREA_N") +
+tm_shape(nv_origin) +
+  tm_dots()
+```
+:::
+
+## 5.2 Network Constrained KDE (NetKDE) Analysis
+
+We will now perform NetKDE analysis by using appropriate functions provided in spNetwork package.
+
+### 5.2.1 Preparing the lixels objects
+
+### Before we can compute NetKDE, the SpatialLines object need to be cut into lixels with a specified minimal distance, and this can be done using lixelize_lines() of spNetwork package.
+
+```{r}
+cg_lixels <- lixelize_lines(cg_roads, 
+                         700, 
+                         mindist = 350)
+
+tp_lixels <- lixelize_lines(tp_roads, 
+                         700, 
+                         mindist = 350)
+
+wl_lixels <- lixelize_lines(wl_roads, 
+                         700, 
+                         mindist = 350)
+
+nv_lixels <- lixelize_lines(nv_roads, 
+                         700, 
+                         mindist = 350)
+```
+
+### 5.2.2 Generating line centre points
+
+Next, we will use lines_center() of spNetwork to generate a SpatialPointsDataFrame (i.e. samples) with line centre points.
+
+```{r}
+cg_lines_center <- lines_center(cg_lixels)
+tp_lines_center <- lines_center(tp_lixels)
+wl_lines_center <- lines_center(wl_lixels)
+nv_lines_center <- lines_center(nv_lixels)
+```
+
+### 5.2.3 Computing NetKDE
+
+We are now ready to compute NetKDE. As the code is fairly long, we will split it into 4 tabs.
+
+::: panel-tabset
+## Changi
+
+```{r}
+# Origin
+cg_o_densities <- nkde(cg_roads, 
+                  events = cg_origin,
+                  w = rep(1,nrow(cg_origin)),
+                  samples = cg_lines_center,
+                  kernel_name = "quartic", # kernel method
+                  bw = 300, 
+                  div= "bw", 
+                  method = "simple", 
+                  # method used to calculate NKDE. spNetwork supports 3 popular                                     methods, namely simple, discontinuous, and continuous
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(1,1), 
+                  max_depth = 8,
+                  agg = 5, 
+                  # we aggregate events within a 5m radius (faster calculation)
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+
+## Tampines
+
+```{r}
+tp_o_densities <- nkde(tp_roads, 
+                  events = tp_origin,
+                  w = rep(1,nrow(tp_origin)),
+                  samples = tp_lines_center,
+                  kernel_name = "quartic", # kernel method
+                  bw = 300, 
+                  div= "bw", 
+                  method = "simple", 
+                  # method used to calculate NKDE. spNetwork supports 3 popular                                     methods, namely simple, discontinuous, and continuous
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(1,1), 
+                  max_depth = 8,
+                  agg = 5, 
+                  # we aggregate events within a 5m radius (faster calculation)
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+
+## Woodlands
+
+```{r}
+wl_o_densities <- nkde(wl_roads, 
+                  events = wl_origin,
+                  w = rep(1,nrow(wl_origin)),
+                  samples = wl_lines_center,
+                  kernel_name = "quartic", # kernel method
+                  bw = 300, 
+                  div= "bw", 
+                  method = "simple", 
+                  # method used to calculate NKDE. spNetwork supports 3 popular                                     methods, namely simple, discontinuous, and continuous
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(1,1), 
+                  max_depth = 8,
+                  agg = 5, 
+                  # we aggregate events within a 5m radius (faster calculation)
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+
+## Novena
+
+```{r}
+nv_o_densities <- nkde(nv_roads, 
+                  events = nv_origin,
+                  w = rep(1,nrow(nv_origin)),
+                  samples = nv_lines_center,
+                  kernel_name = "quartic", # kernel method
+                  bw = 300, 
+                  div= "bw", 
+                  method = "simple", 
+                  # method used to calculate NKDE. spNetwork supports 3 popular                                     methods, namely simple, discontinuous, and continuous
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(1,1), 
+                  max_depth = 8,
+                  agg = 5, 
+                  # we aggregate events within a 5m radius (faster calculation)
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+:::
+
+### 5.2.4 Reinsert Density
+
+Before we are able to visualise, we first need to insert the computed values back into lines_center and lixels objects as density field.
+
+```{r}
+cg_lines_center$o_density <- cg_o_densities
+cg_lixels$o_density <- cg_o_densities
+
+tp_lines_center$o_density <- tp_o_densities
+tp_lixels$o_density <- tp_o_densities
+
+wl_lines_center$o_density <- wl_o_densities
+wl_lixels$o_density <- wl_o_densities
+
+nv_lines_center$o_density <- nv_o_densities
+nv_lixels$o_density <- nv_o_densities
+```
+
+Since svy21 projection system is in meter, the computed density values are very small i.e. 0.0000005. We will thus need to rescale the density values from number of events per meter to number of events per kilometer.
+
+```{r}
+cg_lines_center$o_density <- cg_lines_center$o_density*1000
+cg_lixels$o_density <- cg_lixels$o_density*1000
+
+tp_lines_center$o_density <- tp_lines_center$o_density*1000
+tp_lixels$o_density <- tp_lixels$o_density*1000
+
+wl_lines_center$o_density <- wl_lines_center$o_density*1000
+wl_lixels$o_density <- wl_lixels$o_density*1000
+
+nv_lines_center$o_density <- nv_lines_center$o_density*1000
+nv_lixels$o_density <- nv_lixels$o_density*1000
+```
+
+### 5.2.5 Visualising NetKDE
+
+::: panel-tabset
+## Changi
+
+```{r}
+tmap_mode('view')
+tm_basemap(leaflet::providers$OpenStreetMap) +
+tm_shape(cg_lixels)+
+  tm_lines(col="o_density")+
+tm_shape(cg_origin)+
+  tm_dots(alpha=0.2)
+tmap_mode('plot')
+```
+
+This tmap plot further reinforces our observation above that the grab ride traffic are from incoming tourists or locals returning home form the airport, as you can see the denser area being the Changi Airport Terminals. However, it is worth highlighting that there some slight traffic along the Changi Village area and infront of the Japanese School as well.
+
+## Tampines
+
+```{r}
+tmap_mode('view')
+tm_basemap(leaflet::providers$OpenStreetMap) +
+tm_shape(tp_lixels)+
+  tm_lines(col="o_density")+
+tm_shape(tp_origin)+
+  tm_dots(alpha=0.2)
+tmap_mode('plot')
+```
+
+As we have discovered earlier, a huge portion of the grab rides indeed originated from Tampines East, one of the more populated area of Tampines. Particularly along Tampines Avenue 2, there seems to be a higher density, presumably due to it being more convenient to get a ride along the main road.
+
+Surprisingly, the other higher density area in this network density map is the area around Changi General Hospital.
+
+## Woodlands
+
+```{r}
+tmap_mode('view')
+tm_basemap(leaflet::providers$OpenStreetMap) +
+tm_shape(wl_lixels)+
+  tm_lines(col="o_density")+
+tm_shape(wl_origin)+
+  tm_dots(alpha=0.2)
+tmap_mode('plot')
+```
+
+There are 3 main points of to focus on with higher density, mainly:
+
+-   Along the route to Woodlands Checkpoint, showing that a significant portion of the rides in Woodlands are people coming in from Malaysia.
+
+-   Around the main hub of Woodlands, along the Woodlands MRT stretch. No surprises here, as the area is perhaps the most dense in terms of human traffic due to concentration of malls, bus interchange, and MRT station.
+
+-   3 different points around the Sembawang Air Base, which I assume is the entrance. This make sense as well, as military bases in Singapore are generally more inaccessible.
+
+## Novena
+
+```{r}
+tmap_mode('view')
+tm_basemap(leaflet::providers$OpenStreetMap) +
+tm_shape(nv_lixels)+
+  tm_lines(col="o_density")+
+tm_shape(nv_origin)+
+  tm_dots(alpha=0.2)
+tmap_mode('plot')
+```
+
+Network KDE indicates that the majority of the traffic is along Moulmein Road, which is the main road next to several of the moderately wealthier estates in Singapore.
+:::
+
+## 5.3 Network Constrained G- and K-Function Analysis
+
+We are now going to perform complete spatial randomness (CSR) test by using kfunctions() of spNetwork package. The null hypothesis is defined as:
+
+-   The observed spatial point events (i.e distribution of Grab ride hailing points) are uniformly distributed over a street network in the 4 Planning Area specified above.
+
+The CSR test is based on the assumption of the binomial point process which implies the hypothesis that the childcare centres are randomly and independently distributed over the street network.
+
+If this hypothesis is rejected, we may infer that the distribution of Grab ride hailing points are spatially interacting and dependent on each other; as a result, they may form nonrandom patterns.
+
+::: panel-tabset
+## Changi
+
+```{r}
+kfun_cg <- kfunctions(cg_roads, 
+                             cg_origin[c("trj_id","PLN_AREA_N", "geometry")],
+                             start = 0,
+                             # A double, the start value for evaluating the k and                                  g functions.
+                             end = 1000, 
+                             #  A double, the last value for evaluating the k                                 and g functions.
+                             step = 50, 
+                             # A double, the jump between two evaluations of the                               k and g function
+                             width = 50,
+                             # The width of each donut for the g-function
+                             nsim = 50,
+                             # number of Monte Carlo simulations required.
+                             resolution = 50,
+                             verbose = FALSE,
+                             agg = 5,
+                             conf_int = 0.05
+                             #  A double indicating the width confidence interval                               (default = 0.05).
+                             )
+
+kfun_cg
+```
+
+The blue line represents the empirical network K-function of the Grab ride hailing origin points in Changi planning area. The gray envelop represents the results of the 50 simulations in the interval 2.5% - 97.5%. Because the blue line is above the gray area, we can infer that these origin points in Changi planning area are in clusters, which reinforces our observations made above.
+
+## Tampines
+
+```{r}
+kfun_tp <- kfunctions(tp_roads, 
+                             tp_origin[c("trj_id","PLN_AREA_N", "geometry")],
+                             start = 0,
+                             # A double, the start value for evaluating the k and                                  g functions.
+                             end = 1000, 
+                             #  A double, the last value for evaluating the k                                 and g functions.
+                             step = 50, 
+                             # A double, the jump between two evaluations of the                               k and g function
+                             width = 50,
+                             # The width of each donut for the g-function
+                             nsim = 50,
+                             # number of Monte Carlo simulations required.
+                             resolution = 50,
+                             verbose = FALSE,
+                             agg = 10,
+                             conf_int = 0.05
+                             #  A double indicating the width confidence interval                               (default = 0.05).
+                             )
+
+kfun_tp
+```
+
+Similar to Changi planning area, as the blue line is above the grey area, we can infer that the Tampines planning area consists of mainly origin points in clusters.
+
+## Woodlands
+
+```{r}
+kfun_wl <- kfunctions(wl_roads, 
+                             wl_origin[c("trj_id","PLN_AREA_N", "geometry")],
+                             start = 0,
+                             # A double, the start value for evaluating the k and                                  g functions.
+                             end = 1000, 
+                             #  A double, the last value for evaluating the k                                 and g functions.
+                             step = 50, 
+                             # A double, the jump between two evaluations of the                               k and g function
+                             width = 50,
+                             # The width of each donut for the g-function
+                             nsim = 50,
+                             # number of Monte Carlo simulations required.
+                             resolution = 50,
+                             verbose = FALSE,
+                             agg = 5,
+                             conf_int = 0.05
+                             #  A double indicating the width confidence interval                               (default = 0.05).
+                             )
+
+kfun_wl
+```
+
+Similar to Changi planning area, as the blue line is above the grey area, we can infer that the Woodlands planning area consists of mainly origin points in clusters.
+
+## Novena
+
+```{r}
+kfun_nv <- kfunctions(nv_roads, 
+                             nv_origin[c("trj_id","PLN_AREA_N", "geometry")],
+                             start = 0,
+                             # A double, the start value for evaluating the k and                                  g functions.
+                             end = 1000, 
+                             #  A double, the last value for evaluating the k                                 and g functions.
+                             step = 50, 
+                             # A double, the jump between two evaluations of the                               k and g function
+                             width = 50,
+                             # The width of each donut for the g-function
+                             nsim = 50,
+                             # number of Monte Carlo simulations required.
+                             resolution = 50,
+                             verbose = FALSE,
+                             agg = 5,
+                             conf_int = 0.05
+                             #  A double indicating the width confidence interval                               (default = 0.05).
+                             )
+
+kfun_nv
+```
+
+Similar to Changi planning area, as the blue line is above the grey area, we can infer that the Novena planning area consists of mainly origin points in clusters.
+:::
+
+The results of our G- and K-Function Analysis on all four planning area shows a spatial pattern of clustering among the grab origin points, which supports the idea that grab rides are commonly booked at the same location within an area, possibly due to designated pickup points or taxi stands.
+
+# 6. Conclusion
+
+In conclusion, our analysis of Grab ride-hailing origin points in the specific planning areas of Changi, Tampines, Woodlands, and Novena, and also the whole of Singapore uncovered noteworthy spatial patterns. The observed clustering of origin points within these areas suggests a localized preference for specific pickup locations, potentially driven by factors such as designated pickup points, popular landmarks, transportation hubs, or simply area with higher population density.
+
+These findings hold practical implications for both Grab and urban planners as the identified clusters can guide Grab in optimizing their service by strategically placing vehicles or promoting the use of specific pickup points, ultimately enhancing the efficiency and user experience. Urban planners, on the other hand, can leverage this information to make informed decisions regarding infrastructure development, such as improving the accessibility of popular pickup locations or adjusting traffic flow in areas with high ride-hailing activity.
+
+Moreover, understanding the spatial dynamics of Grab ride-hailing services contributes to a broader perspective on urban mobility patterns. This knowledge can be valuable for city officials, transportation authorities, and policymakers in crafting policies that support sustainable and efficient transportation solutions. By aligning urban planning efforts with the observed ride-hailing patterns, cities can work towards creating more resilient, user-friendly, and accessible transportation systems.
+
+In essence, our analysis not only sheds light on the localized behaviors of Grab users but also opens avenues for strategic decision-making that can enhance the overall urban mobility landscape. As technology continues to shape the future of transportation, such spatial insights play a crucial role in fostering innovation and creating urban environments that are responsive to the evolving needs of their residents.
