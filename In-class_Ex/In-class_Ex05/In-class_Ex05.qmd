@@ -11,13 +11,60 @@ execute:
 date: "`r Sys.Date()`"
 ---
 
-Only need to run once, write to rds file.
+# 1. Learning Objective
+
+# 2. Getting Started
+
+## 2.1 Context
+
+## **2.2 Loading R Packages**
+
+Packages used -
+
+```{r}
+pacman::p_load(sf, sfdep, tmap, tidyverse)
+```
+
+## 2.3 Data Importing and Preparation
+
+### 2.3.1 Dataset
+
+We will be using the following dataset in this hands-on exercise:
+
+-   Hunan province administrative boundary layer at county level. This is a geospatial data set in ESRI shapefile format.
+
+-   Hunan_2012.csv: This csv file contains selected Hunan's local development indicators in 2012.
+
+### 2.3.2 Importing Data
+
+We will use *`st_read()`* of **sf** package to import Hunan shapefile into R as a simple feature object.
+
+```{r}
+#| eval: false
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+```
+
+Next, we will import *Hunan_2012.csv* into R by using *`read_csv()`* of **readr** package as a R data frame class.
+
+```{r}
+#| eval: false
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+### 2.3.3 Relational Join
+
+We will perform a [`left_join()`](https://dplyr.tidyverse.org/reference/mutate-joins.html) from **dplyr** package to update the attribute table of *hunan*'s SpatialPolygonsDataFrame with the attribute fields of *hunan2012* dataframe.
 
 ```{r}
 #| eval: false
 hunan_GDPPC <- left_join(hunan,hunan2012) %>%
-  select(1:4, 7, 15)
+  dplyr::select(1:4, 7, 15)
 ```
+
+### 2.3.3 Writing/Reading RDS file
+
+This section and the one above will only be run once and omitted in subsequent runs, as by writing to rds file will allow us to read it when we want to run this file.
 
 ```{r}
 #| eval: false
@@ -26,5 +73,65 @@ write_rds(hunan_GDPPC,
 ```
 
 ```{r}
+hunan_GDPPC <- read_rds("data/RDS/hunan_GDPPC.rds")
+```
 
+### 2.3.4 V**isualising Regional Development Indicator**
+
+Before we begin our analysis, it is always good to visualise our geographical data. We will now explore the distribution of GDPPC 2012 by using functions of **tmap** package to prepare a basemap and a choropleth map.
+
+```{r}
+tmap_mode('plot') +
+  tm_shape(hunan_GDPPC) +
+  tm_fill("GDPPC",
+          style =  "quantile",
+          palette = "Blues",
+          title = "GDPPC") +
+  tm_layout(main.title = "Distribution of GDP per capita by country, Hunan Province",
+            main.title.position = "center",
+            main.title.size = 1.2,
+            legend.height = 0.45,
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_borders(alpha = 0.5) +
+  tm_compass(type="8star", size = 0.2) +
+  tm_scale_bar() + 
+  tm_grid(alpha = 0.2)
+```
+
+# 3. Computing **Contiguity Spatial Weights**
+
+### 3.1 Deriving contiguity weights: Queen's method
+
+**sfdep** package method of combining *`poly2nb()`* and *`nb2listw()`* functions from **spdep** package into one function.
+
+```{r}
+wm_q <- hunan_GDPPC %>%
+  mutate(nb = st_contiguity(geometry),
+         wt = st_weights(nb, style = "W"),
+         .before = 1)
+```
+
+```{r}
+global_moran_test(wm_q$GDPPC,
+                  wm_q$nb,
+                  wm_q$wt)
+```
+
+sfdep package's monte carlo simulation for calculating Global Moran I
+
+```{r}
+set.seed(1234)
+global_moran_perm(wm_q$GDPPC,
+                  wm_q$nb,
+                  wm_q$wt,
+                  nsim = 99)
+```
+
+Computing Global Moran I
+
+```{r}
+moranI <- global_moran(wm_q$GDPPC,
+                       wm_q$nb,
+                       wm_q$wt)
 ```
