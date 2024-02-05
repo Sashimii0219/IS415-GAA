@@ -1,5 +1,5 @@
 ---
-title: "Hands-on Exercise 4"
+title: "Hands-on Exercise 4 - Spatial Weights and Applications"
 format: 
   html:
     code-fold: true

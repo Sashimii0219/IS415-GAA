@@ -1,0 +1,30 @@
+---
+title: "In-class Exercise 5"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+Only need to run once, write to rds file.
+
+```{r}
+#| eval: false
+hunan_GDPPC <- left_join(hunan,hunan2012) %>%
+  select(1:4, 7, 15)
+```
+
+```{r}
+#| eval: false
+write_rds(hunan_GDPPC,
+          "data/RDS/hunan_GDPPC.rds")
+```
+
+```{r}
+
+```

@@ -56,7 +56,30 @@ The datasets that we will be using are as follow:
 Using *`read_parquet()`* function from **arrow** package to import the grab data, then changing pingtimestamp column to datetime object
 
 ```{r}
-grab_df <- read_parquet("data/aspatial/part-00000.snappy.parquet")
+
+grab_df0 <- read_parquet("data/aspatial/part-00000.snappy.parquet")
+grab_df1 <- read_parquet("data/aspatial/part-00001.snappy.parquet")
+grab_df2 <- read_parquet("data/aspatial/part-00002.snappy.parquet")
+grab_df3 <- read_parquet("data/aspatial/part-00003.snappy.parquet")
+grab_df4 <- read_parquet("data/aspatial/part-00004.snappy.parquet")
+grab_df5 <- read_parquet("data/aspatial/part-00005.snappy.parquet")
+grab_df6 <- read_parquet("data/aspatial/part-00006.snappy.parquet")
+grab_df7 <- read_parquet("data/aspatial/part-00007.snappy.parquet")
+grab_df8 <- read_parquet("data/aspatial/part-00008.snappy.parquet")
+grab_df9 <- read_parquet("data/aspatial/part-00009.snappy.parquet")
+```
+
+```{r}
+grab_df <- bind_rows(grab_df0,
+                     grab_df1,
+                     grab_df2,
+                     grab_df3,
+                     grab_df4,
+                     grab_df5,
+                     grab_df6,
+                     grab_df7,
+                     grab_df8,
+                     grab_df9)
 
 grab_df$pingtimestamp <- as_datetime(grab_df$pingtimestamp)
 ```
