@@ -7,11 +7,12 @@ format:
 execute: 
   eval: true
   echo: true
+  freeze: auto
   warning: false
 date: "`r Sys.Date()`"
 ---
 
-# Overview
+# 1. Learning Objectives
 
 Spatial Point Pattern Analysis is the evaluation of pattern/distribution of a set of points on a surface, where the points can be location of events (crime, traffic accident) or business services (chain outlets, hospitals).
 
@@ -21,7 +22,7 @@ In this Hands-on Exercise, we will be answering the following questions:
 
 -   if the answer is not, then the next logical question is where are the locations with higher concentration of childcare centres?
 
-# Getting Started
+# 2. Getting Started
 
 #### Installing and loading R packages
 

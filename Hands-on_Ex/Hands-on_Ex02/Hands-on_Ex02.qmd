@@ -7,39 +7,44 @@ format:
 execute: 
   eval: true
   echo: true
+  freeze: auto
   warning: false
 date: "`r Sys.Date()`"
 ---
 
-# Overview
+# 1. Learning Objectives
 
-Summary of learning
+In this chapter, we will learn how to plot functional and truthful choropleth maps by using an R package called **tmap**.
 
-# Getting Started
+# 2. Getting Started
 
-#### Installing and loading R packages
+## **2.1 Context**
 
-The R packages that I will be using today are *tmap*, *readr*, *tidyr*, *dplyr* and *sf*.
+In general, thematic mapping involves the use of map symbols to visualize selected properties of geographic features that are not naturally visible, such as population, temperature, crime rate, and property prices, just to mention a few of them.
+
+Geovisualisation, on the other hand, works by providing graphical ideation to render a place, a phenomenon or a process visible, enabling human's most powerful information-processing abilities -- those of spatial cognition associated with our eye--brain vision system -- to be directly brought to bear.
+
+## **2.2 Loading R Packages**
+
+The R packages that we will be using today are *tmap*, *readr*, *tidyr*, *dplyr* and *sf*.
 
 ```{r}
 pacman::p_load(tmap, tidyverse, sf)
 ```
 
-# Importing Data
+## 2.3 Data Importing
 
-#### Dataset
+### 2.3.1 Dataset
 
 The data that we will be using to create the choropleth map are:
 
 -   Master Plan 2014 Subzone Boundary (Web) (Geospatial Data)
-
-<!-- -->
-
+-   
 -   Singapore Residents by Planning Area / Subzone, Age Group, Sex and Type of Dwelling, June 2011-2020 in CSV (Aspatial Data)
 
 Note: Although it does not contain any coordinates values, but it's **PA** and **SZ** fields can be used as unique identifiers to geocode to MP14_SUBZONE_WEB_PL shapefile.
 
-#### Importing Geospatial Data
+### 2.3.2 Importing Geospatial Data
 
 Using *`st_read()`* function of sf package to import **MP14_SUBZONE_WEB_PL** shapefile into R.
 
@@ -48,7 +53,7 @@ mpsz <- st_read(dsn = "data/geospatial",
                 layer = "MP14_SUBZONE_WEB_PL")
 ```
 
-#### Importing Attribute Data
+### 2.3.3 Importing Attribute Data
 
 Importing **respopagesextod2011to2020.csv** using *`read_csv()`* function of ***readr*** package into R.
 
@@ -60,27 +65,18 @@ popdata <- read_csv("data/aspatial/respopagesextod2011to2020.csv")
 popdata
 ```
 
-# Data Preparation
+## 2.4 Data Preparation
 
-#### Data Wrangling
+### 2.4.1 Data Wrangling
 
 We will be preparing a data table with year 2020 values that includes the following variables:
 
 -   YOUNG: age group 0 to 4 until age group 20 to 24,
-
-<!-- -->
-
 -   ECONOMY ACTIVE: age group 25 to 29 until age group 60 to 64,
-
-<!-- -->
-
 -   AGED: age group 65 and above, - TOTAL: all age group, and
-
-<!-- -->
-
 -   DEPENDENCY: the ratio between young and aged against economy active group
 
-Using the following functions: - *`pivot_wider()`* of [*tidyr*]{.underline} package, and - *`mutate()`*, *`filter()`*, *`group_by()`* and *`select()`* of *dplyr* package
+Using the following functions: - *`pivot_wider()`* of [*tidyr*]{.underline} package, and - *`mutate()`*, *`filter()`*, *`group_by()`* and *`select()`* of *dplyr* package.
 
 ```{r}
 popdata2020 <- popdata %>%
@@ -89,7 +85,8 @@ popdata2020 <- popdata %>%
   summarise(`POP` = sum(`Pop`)) %>% # Group Pop value by summing them
   ungroup()%>%
   pivot_wider(names_from=AG, 
-              values_from=POP) %>% # Splitting the values in column AG into their own column, with the value from POP
+              values_from=POP) %>% 
+  # Splitting the values in column AG into their own column, with the value from POP
   mutate(YOUNG = rowSums(.[3:6])
          +rowSums(.[12])) %>%
 mutate(`ECONOMY ACTIVE` = rowSums(.[7:11])+
@@ -98,7 +95,7 @@ mutate(`AGED`=rowSums(.[16:21])) %>%
 mutate(`TOTAL`=rowSums(.[3:21])) %>%  
 mutate(`DEPENDENCY` = (`YOUNG` + `AGED`) # Calculate %
 /`ECONOMY ACTIVE`) %>%
-  select(`PA`, `SZ`, `YOUNG`, 
+  dplyr::select(`PA`, `SZ`, `YOUNG`, 
        `ECONOMY ACTIVE`, `AGED`, 
        `TOTAL`, `DEPENDENCY`)
 ```
@@ -116,6 +113,8 @@ popdata2020 <- popdata2020 %>%
   filter(`ECONOMY ACTIVE` > 0) # Filter out areas with no "ECONOMY ACTIVE"
 ```
 
+### 2.4.2 Relational Join
+
 Using the *`left_join()`* of *dplyr*, we join the geographical data and the attribute table using planning subzone name (SUBZONE_N of mpsz is = SZ of popdata2020).
 
 ```{r}
@@ -127,7 +126,9 @@ mpsz_pop2020 <- left_join(mpsz, popdata2020,
 write_rds(mpsz_pop2020, "data/rds/mpszpop2020.rds")
 ```
 
-# Choropleth Mapping Geospatial Data Using tmap
+# 3. Choropleth Mapping Geospatial Data Using tmap
+
+## 3.1 **Plotting a choropleth map quickly by using *qtm()***
 
 Easiest and quickest to draw a choropleth map using *tmap* is using *`qtm()`*.
 
@@ -141,7 +142,7 @@ qtm(mpsz_pop2020,
     fill = "DEPENDENCY")
 ```
 
-# Creating a choropleth map by using tmap's elements
+## 3.2 Creating a choropleth map by using tmap's elements
 
 Disadvantage of *`qtm()`* is that it makes aesthetics of individual layers harder to control. To draw a high quality cartographic choropleth map, tmap's drawing elements should be used.
 
@@ -167,13 +168,15 @@ tm_shape(mpsz_pop2020)+
 
 The map above consist of the following elements:
 
-#### Base Map
+### 3.2.1 Base Map
 
 The basic building block of tmap is *`tm_shape()`* followed by one or more layer elemments such as *`tm_fill()`* and *`tm_polygons()`*.
 
 In the code chunk below, *`tm_shape()`* is used to define the input data (i.e mpsz_pop2020) and *`tm_polygons()`* is used to draw the planning subzone polygons.
 
 To draw a choropleth map showing the geographical distribution of a selected variable by planning subzone, we just need to assign the target variable such as Dependency to *`tm_polygons()`*.
+
+### 3.2.2 Using tm_polygons()
 
 ```{r}
 tm_shape(mpsz_pop2020) +
@@ -187,6 +190,8 @@ Note:
 -   Default colour scheme - "YlOrRd"
 
 -   Default Missing value colour - Grey
+
+### 3.2.3 Using tm_fill() and tm_borders()
 
 *`tm_polygons()`* can be further broken down into:
 
@@ -210,7 +215,7 @@ tm_shape(mpsz_pop2020)+
 
 -   lty = border line type. The default is "solid".
 
-# Data classification methods of tmap
+## 3.3 Data classification methods of tmap
 
 Most choropleth maps employ some methods of data classification.
 
@@ -218,7 +223,7 @@ Most choropleth maps employ some methods of data classification.
 
 To define data classfication method, we will be using the style argument of of *`tm_fill()`* or *`tm_polygons()`*.
 
-#### Plotting choropleth maps with built-in classification methods
+### 3.3.1 Plotting choropleth maps with built-in classification methods
 
 The code chunk below shows a quantile data classification that used 5 classes.
 
@@ -230,7 +235,7 @@ tm_shape(mpsz_pop2020)+
   tm_borders(alpha = 0.5)
 ```
 
-#### Plotting choropleth map with custom break
+### 3.3.2 Plotting choropleth map with custom break
 
 For all the built-in styles, the category breaks are computed internally. This can be overriden using the *`breaks`* argument of the *`tm_fill()`* function. In order to end up with n categories, n+1 elements must be specified in the breaks option (the values must be in increasing order).
 
@@ -251,9 +256,9 @@ tm_shape(mpsz_pop2020)+
   tm_borders(alpha = 0.5)
 ```
 
-# Colour Scheme
+## 3.4 Colour Scheme
 
-#### Using ColourBrewer palette
+### 3.4.1 Using ColourBrewer palette
 
 Assigning a colour to `palette` argument of *`tm_fill()`* changes the colour.
 
@@ -277,11 +282,11 @@ tm_shape(mpsz_pop2020)+
   tm_borders(alpha = 0.5)
 ```
 
-# Map layout
+## 3.5 Map layout
 
 Refers to the combination of all map elements into a cohesive map, e.g. the title, the scale bar, the compass, margins and aspects ratios.
 
-#### Map Legend
+### 3.5.1 Map Legend
 
 In *tmap*, several legend options are provided to change the placement, format and appearance of the legend.
 
@@ -304,7 +309,7 @@ tm_shape(mpsz_pop2020)+
   tm_borders(alpha = 0.5)
 ```
 
-#### Map Style
+### 3.5.2 Map Style
 
 Refers to the layout settings.
 
@@ -317,7 +322,7 @@ tm_shape(mpsz_pop2020)+
   tmap_style("classic")
 ```
 
-#### Cartographic Furniture
+### 3.5.3 Cartographic Furniture
 
 Refers to map furniture like compass, scale bar and grid lines.
 
@@ -343,13 +348,13 @@ tm_shape(mpsz_pop2020)+
 
 To reset to default style, use tmap_style("white").
 
-# Drawing Small Multiple Choropleth Maps
+## 3.6 Drawing Small Multiple Choropleth Maps
 
 Small multiple maps / facet maps are composed of many maps arrange side-by-side / stacked vertically. It is used to visualise how spatial relationships change with respect to another variable, such as time. This can be done using tmap in 3 ways:
 
-#### By assigning multiple values to at least one of the asthetic arguments
+### 3.6.1 By assigning multiple values to at least one of the asthetic arguments
 
-Small multiple choropleth maps are created by defining ncols in tm_fill(), in this case **c("YOUNG", "AGED")**.
+Small multiple choropleth maps are created by defining ncols in *`tm_fill()`*, in this case **c("YOUNG", "AGED")**.
 
 ```{r}
 tm_shape(mpsz_pop2020)+
@@ -371,7 +376,7 @@ tm_shape(mpsz_pop2020)+
   tm_layout(legend.position = c("right", "bottom"))
 ```
 
-#### By defining a group-by variable in tm_facets(), and
+### 3.6.2 By defining a group-by variable in tm_facets(), and
 
 ```{r}
 tm_shape(mpsz_pop2020) +
@@ -388,7 +393,7 @@ tm_shape(mpsz_pop2020) +
   tm_borders(alpha = 0.5)
 ```
 
-#### By creating multiple stand-alone maps with tmap_arrange().
+### 3.6.3 By creating multiple stand-alone maps with tmap_arrange().
 
 ```{r}
 youngmap <- tm_shape(mpsz_pop2020)+ 
@@ -404,7 +409,7 @@ agedmap <- tm_shape(mpsz_pop2020)+
 tmap_arrange(youngmap, agedmap, asp=1, ncol=2) # here
 ```
 
-# Mappping Spatial Object Meeting a Selection Criterion
+## 3.7 Mappping Spatial Object Meeting a Selection Criterion
 
 Instead of creating small multiple choropleth map, you can also use selection function to map spatial objects meeting the selection criterion.
 
