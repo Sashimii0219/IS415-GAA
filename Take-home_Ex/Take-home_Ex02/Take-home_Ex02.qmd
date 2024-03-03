@@ -1,0 +1,830 @@
+---
+title: "Take-home Exercise 2"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  freeze: auto
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+# 1. Introduction
+
+## 1.1 Context
+
+[Dengue Hemorrhagic Fever](https://www.cdc.gov/dengue/resources/denguedhf-information-for-health-care-practitioners_2009.pdf) (in short dengue fever) is one of the most widespread mosquito-borne diseases in the most tropical and subtropical regions. It is an acute disease caused by dengue virus infection which is transmitted by female Aedes aegypti and Aedes albopictus mosquitoes. In 2015, Taiwan had recorded the most severe dengue fever outbreak with more than 43,000 dengue cases and 228 deaths. Since then, the annual reported dengue fever cases were maintained at the level of not more than 200 cases. However, in 2023, Taiwan recorded 26703 dengue fever cases. More than 25,000 cases were reported at Tainan City, and more than 80% of the reported dengue fever cases occurred in the month August-November 2023 and epidemiology week 31-50.
+
+## 1.2 Objectives
+
+We will be exploring the following:
+
+-   if the distribution of dengue fever outbreak at Tainan City, Taiwan are independent from space and space and time.
+
+-   If the outbreak is indeed spatial and spatio-temporal dependent, and if so discover where are the clusters and outliers, and the emerging hot spot/cold spot areas.
+
+# 2. Getting Started
+
+## 2.1 Loading R packages
+
+The R packages that we will be using in this exercise are as follows:
+
+-   **sf:** for importing and handling geospatial data in R
+
+-   **tidyverse:** a collection of packages for data science tasks
+
+-   **sfdep:** Used to compute spatial weights, global and local spatial autocorrelation statistics, and emerging hotspot analysis (EHSA)
+
+-   **spdep:** Similar to sfdep.
+
+-   **tmap:** Provides functions for plotting cartographic quality static point patterns maps or interactive maps by using leaflet API.
+
+-   **lubridate:** For manipulating datetime variables.
+
+-   **ggplot2:** Allows for simple visualisations like bar charts and line plots.
+
+-   **Kendall:** Provides the tool to perform Mann-Kendall test
+
+```{r}
+pacman::p_load(sf, tidyverse, sfdep, spdep, tmap, lubridate, ggplot2, Kendall)
+```
+
+## 2.2 Datasets
+
+| Name             | Description                                                  | File Type      |
+|---------------|------------------------------------------|---------------|
+| TAINAN_VILLAGE   | Geospatial data of village boundary of Taiwan                | ESRI Shapefile |
+| Dengue_Daily.csv | Aspatial data of reported dengue cases in Taiwan since 1998. | CSV Format     |
+
+## 2.3 Importing the datasets
+
+The datasets that we will be using are as follow:
+
+::: panel-tabset
+## Taiwan Village 2020
+
+We will read the shape file in as a sf data frame using *`st_read()`*, transform it using *`st_transform()`* to the right CRS which is 3829, then confine the scope to counties specified in the assignment brief using *`filter()`* on 'TOWNID'.
+
+```{r}
+tainan <- st_read(dsn = "data/geospatial",
+                 layer = "TAINAN_VILLAGE") %>% 
+  st_transform(crs = 3829) %>%
+  filter(TOWNID %in% c("D01","D02","D04","D06","D07","D08","D32","D39"))
+```
+
+## Taiwan Dengue Cases
+
+```{r}
+dengue <- read_csv("data/aspatial/Dengue_Daily.csv")
+```
+:::
+
+Importing Tainan Polygons
+
+```{r}
+tainan <- st_read(dsn = "data/geospatial",
+                 layer = "TAINAN_VILLAGE") %>% 
+  st_transform(crs = 3829) %>%
+  filter(TOWNID %in% c("D01","D02","D04","D06","D07","D08","D32","D39"))
+```
+
+# 3. Data Wrangling
+
+## 3.1 Data Pre-processing - Taiwan Village 2020 Dataset
+
+```{r}
+glimpse(tainan)
+```
+
+First look at the dataset reveals that there are several columns that are either in Traditional Chinese or contain IDs that we do not need. In that case, let's drop those columns and the last 4 letters (spacebar + Vil.) of VILLENG column:
+
+```{r}
+tainan_clean <- tainan %>%
+  mutate(village = substring(VILLENG, 1, nchar(VILLENG)-5)) %>%
+  select(1,4,12,11)
+```
+
+In the case of Chinese Pinyin, different variations of similar sounding Chinese words can end up the same when translated to English.
+
+```{r}
+tainan_clean[duplicated(tainan_clean$village),]
+```
+
+We can see that there are 9 such instances. Let's take a closer look at the first entry.
+
+```{r}
+tainan_clean[tainan_clean$village == "Xidong",]
+```
+
+The first one is called Xi3 Dong, while the second one is Xi1 Dong. We will manually change them by adding their village ID in brackets to one of each duplicates.
+
+```{r}
+duplicates <- c(111,112,128,137,146,214,245,246,253)
+tainan_clean[duplicates,"village"] <- paste0(tainan_clean[duplicates,]$village, 
+                                             "(", tainan_clean[duplicates,]$VILLCODE, ")")
+```
+
+```{r}
+tainan_clean[duplicated(tainan_clean$village),]
+tainan_clean
+```
+
+No more duplicates!. Next we will check for invalid geometries and missing values.
+
+```{r}
+test <- st_is_valid(tainan_clean,reason=TRUE)
+
+# Number of invalid geometries
+length(which(test!= "Valid Geometry"))
+
+# Reason
+test[which(test!= "Valid Geometry")]
+```
+
+```{r}
+tainan_clean[rowSums(is.na(tainan_clean))!=0,]
+```
+
+There are no invalid geometries or missing values, great! Now let's do a simple visualization to check if we extracted the right data.
+
+```{r}
+plot(st_geometry(tainan_clean))
+```
+
+## 3.2 Data Pre-processing - Taiwan Dengue Cases
+
+```{r}
+dengue
+```
+
+Similar to the previous dataset, a significant portion of the data are in Traditional Chinese. Fortunately, the only columns we need are 發病日, 最小統計區中心點X, and 最小統計區中心點Y, which translates to Onset Date, X coordinates and Y coordinates. Let's drop the columns that we don't need and translate the column names to English.
+
+```{r}
+dengue_clean <- dengue %>%
+     select(1,10,11) %>%
+  rename(onset_date=發病日,
+         X=最小統計區中心點X,
+         Y=最小統計區中心點Y) %>%
+  filter(!(Y == "None"))
+```
+
+From the date variable, we will also need to extract the epidemiology week and year from the onset_date variable for analysis, then confine it to epidemiology week 31-50, 2023.
+
+```{r}
+dengue_epiweek <- dengue_clean %>%
+  mutate(year = factor(year(onset_date)),
+         epiweek = factor(epiweek(onset_date))) %>%
+  filter(year == 2023 & 
+        (epiweek %in% (31:50)))
+```
+
+Resetting the levels in the factors.
+
+```{r}
+dengue_epiweek$epiweek <- factor(dengue_epiweek$epiweek)
+dengue_epiweek$year <- factor(dengue_epiweek$year)
+```
+
+In order to do spatial analysis, we will need to convert the data to sf dataframe using *`st_as_sf()`*.
+
+```{r}
+dengue_sf <- st_as_sf(dengue_epiweek, 
+                       coords = c("X", "Y"),
+                       crs=4326) %>%
+            st_transform(crs = 3829)
+```
+
+Next, in order to analyse these data by their respective village, we will use st_intersection on dengue_sf and tainan_clean to add their respective village to each data point. We will also drop both the onset_date and year variable as we will not need them anymore.
+
+```{r}
+st_intersection(dengue_sf, tainan_clean)
+```
+
+```{r}
+dengue_combined <- st_intersection(dengue_sf, tainan_clean) %>%
+  select(6,3,7)
+```
+
+Again, we will check for invalid geometries and missing values.
+
+```{r}
+test <- st_is_valid(dengue_combined,reason=TRUE)
+
+# Number of invalid geometries
+length(which(test!= "Valid Geometry"))
+
+# Reason
+test[which(test!= "Valid Geometry")]
+```
+
+```{r}
+dengue_combined[rowSums(is.na(dengue_combined))!=0,]
+```
+
+We will count the total number of cases for each village using the following, then appending it back to the village polygon geometry.
+
+```{r}
+dengue_counts <- dengue_combined %>% 
+                  count(village) %>%
+                  rename(total_cases = n)
+```
+
+```{r}
+tainan_clean_cases <- tainan_clean %>%
+  st_join(dengue_counts) %>%
+  select(4:6) %>%
+  rename(village = village.y) %>%
+  drop_na()
+```
+
+We will now do the same but with village and epiweek for each group, in order for us to create a spacetime cube.
+
+```{r}
+tainan_clean_epw <- tainan_clean %>% mutate(epiweek = factor(31,levels = c(31:50)))
+village_epiweek <- tainan_clean_epw %>% 
+  expand(village,epiweek) 
+
+village_epiweek
+```
+
+```{r}
+dengue_counts_epiweek <- dengue_combined %>%
+  group_by(village,epiweek) %>%
+  count() %>%
+  rename(total_cases = n)
+```
+
+```{r}
+village_epiweek_count <- village_epiweek %>% 
+  left_join(dengue_counts_epiweek, by=c("village","epiweek")) %>%
+  mutate(across(everything(), replace_na, 0)) %>%
+  select(1:3)
+```
+
+## 3.3 Creating Spacetime Cube
+
+We will be creating our spacetime cube for subsequent emerging hot spot analysis.
+
+```{r}
+dengue_spacetime <- spacetime(village_epiweek_count, tainan_clean,
+          .loc_col = "village",
+          .time_col = "epiweek")
+```
+
+Ensuring that our spacetime object is TRUE.
+
+```{r}
+is_spacetime_cube(dengue_spacetime)
+```
+
+## 3.4 **Plotting Spatial Data**
+
+Before we continue, we will first plot the data points together with their respective village to have a quick overview of our spatial data on hand.
+
+```{r}
+tmap_mode('view')
+tm_shape(tainan_clean) +
+  tm_polygons('village') +
+tm_shape(dengue_combined) +
+  tm_dots(alpha=0.5)
+```
+
+## 3.5 **Exploratory Data Analysis**
+
+In order to do geospatial analysis, we first need to have a brief idea of our dataset. In this case, we have some questions related to dengue that we can ask. Before that, let us insert this plot of dengue cases across epiweek for reference.
+
+```{r}
+ggplot(dengue_combined, aes(x=epiweek)) +
+  geom_bar()
+```
+
+### 3.5.1 Where did it started?
+
+So where did the outbreak got out of control? To answer this question, let's first look at the spread of dengue in week 31.
+
+```{r}
+dengue_week31 <- dengue_combined %>%
+  filter(epiweek == 31)
+```
+
+```{r}
+ggplot(dengue_week31, aes(x=village)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Number of dengue cases in Epiweek 31 by Village",
+       x = "Village Name",
+       y = "Number of dengue cases")
+```
+
+At a glance, we can see that there are several outliers that are already has an extremely high amount of dengue cases. Let's sort the dataset by number of cases and take a look at them again.
+
+```{r}
+dengue_week31_top10 <- dengue_week31 %>%
+  group_by(village) %>%
+  summarise(total_count=n()) %>%
+  top_n(10, total_count) %>%
+  .$village
+
+ggplot(dengue_week31[dengue_week31$village %in% dengue_week31_top10,], 
+       aes(x=village)) + geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Trips Destination Distribution by Planning Area",
+       x = "Planning Area",
+       y = "Number of Trips")
+```
+
+We can see that there is a clear outlier in the graph, the village "Wuwang". Moving forward, let's keep that in mind.
+
+### 3.5.2 Area with the most dengue cases
+
+```{r}
+dengue_top10 <- dengue_combined %>%
+  group_by(village) %>%
+  summarise(total_count=n()) %>%
+  top_n(10, total_count) %>%
+  .$village
+
+ggplot(dengue_combined[dengue_combined$village %in% dengue_top10,], 
+       aes(x=village)) + geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Top 10 villages with highest number of overall dengue",
+       x = "Village",
+       y = "Number of dengue cases")
+```
+
+# 4. Global Spatial Autocorrelation Analysis
+
+In this section, we aim to assess the spatial patterns of dengue cases in Tainan by computing global spatial autocorrelation statistics and conducting a spatial complete randomness test for a comprehensive understanding of the disease distribution.
+
+## 4.1 **Computing Contiguity Spatial Weights**
+
+Before we can compute the global spatial autocorrelation statistics for dengue cases in Tainan, we will need to construct a spatial weights of the study area, which is used to define the neighbourhood relationships between the geographical units, in this case the villages. In the following code, there are 2 parts to it - *`st_contiguity()`* computes the contiguity weight matrices, while *`st_weights()`* assign weights to each neighboring polygon.
+
+```{r}
+tainan_clean_cases
+```
+
+```{r}
+wm_q <- tainan_clean_cases %>%
+  mutate(nb = st_contiguity(geometry),
+         wt = st_weights(nb, style = "W"),
+         .before = 1,
+         allow_zero = TRUE)
+```
+
+## 4.2 **Moran's I**
+
+The Moran's I test computes global spatial autocorrelation statistics, and the results of it draws the following conclusion:
+
+-   Moran I \> 0 indicates positive spatial autocorrelation (similar values cluster together),
+
+-   Moran I \< 0 indicates negative spatial autocorrelation (dissimilar values cluster together),
+
+-   Moran I = 0 indicates no spatial autocorrelation (random distribution).
+
+### 4.2.1 Moran's I Test
+
+```{r}
+global_moran_test(wm_q$total_cases,
+                  wm_q$nb,
+                  wm_q$wt)
+```
+
+1.  In our case, the Moran I statistic is 0.464548385, which is positive, suggesting the **presence of positive spatial autocorrelation.**
+2.  The p-value is very small (\< 2.2e-16), further supporting the rejection of the null hypothesis, which means that there is **spatial autocorrelation.**
+
+In summary, based on these results, we can conclude that there is a significant positive spatial autocorrelation in the variable total_cases, meaning that similar values tend to be clustered together in space. This make sense when you consider the nature of transmission of dengue.
+
+### 4.2.2 **Monte Carlo Moran's I**
+
+Even though the analytical approach to the Moran's I analysis **benefits from being fast**, it may be sensitive to irregularly distributed polygons. A safer approach to hypothesis testing is to run a Monte Carlo simulation.
+
+```{r}
+set.seed(9999)
+bperm<- global_moran_perm(wm_q$total_cases,
+                  wm_q$nb,
+                  wm_q$wt,
+                  nsim = 999)
+
+bperm
+```
+
+The results from the Monte Carlo simulation supports our findings from the previous test.
+
+### 4.2.3 **Computing Moran's I correlogram**
+
+We will be using *`sp.correlogram()`* of **spdep** package to compute a 6-lag spatial correlogram of total_cases using the global spatial autocorrelation used in Moran's I.
+
+```{r}
+MI_corr <- sp.correlogram(wm_q$nb, 
+                          tainan_clean_cases$total_cases, 
+                          order=6, 
+                          method="I", 
+                          style="W")
+plot(MI_corr)
+```
+
+Plotting the output alone might not allow us to provide complete interpretation. This is because not all autocorrelation values are statistically significant. Hence, it is important for us to examine the full analysis report by printing out the analysis results as in the code chunk below.
+
+```{r}
+print(MI_corr)
+```
+
+Findings from the above results suggests significant positive spatial autocorrelation in total_cases across various distance lags (1,2,4, and 5), supporting the conclusion that chances of an area being a high-risk dengue zone is high if their neighbor is one.
+
+## 4.3 **Geary's C**
+
+The Geary's C test computes global spatial autocorrelation statistics too, and the results of it draws the following conclusion:
+
+-   The Geary C statistic ranges from 0 to 2. A value less than 1 suggests positive spatial autocorrelation, while a value greater than 1 suggests negative spatial autocorrelation.
+
+### 4.3.1 **Geary's C** Test
+
+```{r}
+global_c_test(wm_q$total_cases,
+                  wm_q$nb,
+                  wm_q$wt)
+```
+
+Based on the result, we can conclude that there is significant positive spatial autocorrelation for dengue cases between the villages. The low p-value and the observed Geary C statistic being less than 1 provide evidence against the null hypothesis of no spatial autocorrelation, supporting the presence of a positive spatial pattern in terms of total number of dengue cases across villages.
+
+### 4.3.2 **Monte Carlo Geary's C**
+
+We will now be performing the Monte Carlo simulation for Geary's C test as well.
+
+```{r}
+set.seed(9999)
+bperm<- global_c_perm(wm_q$total_cases,
+                  wm_q$nb,
+                  wm_q$wt,
+                  nsim = 999)
+bperm
+```
+
+Though the p-value is slightly higher, the results of the Monte Carlo simulation still supports the findings from above.
+
+### 4.3.3 **Computing Geary's C Spatial Correlogram**
+
+```{r}
+GC_corr <- sp.correlogram(wm_q$nb, 
+                          tainan_clean_cases$total_cases, 
+                          order=6, 
+                          method="C", 
+                          style="W")
+plot(GC_corr)
+```
+
+Again, to get a clearer picture, we will print out the analysis report.
+
+```{r}
+print(GC_corr)
+```
+
+In conclusion, the interpretation is that there is **significant positive spatial autocorrelation** in the number of dengue cases between the villages below 2 distance lags. This means that area with high number of dengue cases are spatially clustered, but only below 2 distance lag intervals.
+
+# 5. Local Spatial Autocorrelation Analysis
+
+## 5.1 **Cluster and Outlier Analysis**
+
+Local Indicators of Spatial Association or LISA are statistics that evaluate the existence of clusters in the spatial arrangement of a given variable. In this section, we will apply appropriate Local Indicators for Spatial Association (LISA), especially local Moran'I to detect cluster and/or outlier from dengue cases in Tainan.
+
+### 5.1.1 Computing local Moran's I at the village level
+
+In the code below, we will be computing the Local Moran I's of total number of dengue cases at the village level by using *`local_moran()`* of **sfdep** package.
+
+```{r}
+set.seed(9999)
+lisa <- wm_q %>%
+  mutate(local_moran = local_moran(
+    total_cases, nb, wt, nsim = 99),
+    .before = 1) %>%
+  unnest(local_moran)
+```
+
+### 5.1.2 Mapping the local Moran's I
+
+To better understand the results of the computed values, let's map them out.
+
+```{r}
+tmap_mode('plot')
+map1 <- tm_shape(lisa) +
+  tm_fill("ii",
+          style = "pretty",
+          palette = "RdBu") + 
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "local Moran's I of total_cases",
+            main.title.size = 0.8)
+map1
+```
+
+By mapping out the local Moran's I, we can see that area with the highest values are **Xiqi** village and **Anfu** village.
+
+The choropleth map shows that there is evidence for both positive and negative Ii values. However, let us plot the map for local Moran's I p-values as well.
+
+### 5.1.3 Mapping local Moran's I p-values
+
+```{r}
+tmap_mode('plot')
+map2 <- tm_shape(lisa) +
+  tm_fill("p_ii_sim",
+          style = "pretty",
+          palette = "GnBu") + 
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "p-value of local Moran's I",
+            main.title.size = 0.8)
+
+map2
+```
+
+For a holistic view of the results, let us plot the both map side by side.
+
+```{r}
+tmap_arrange(map1, map2, ncol=2)
+```
+
+Results from this comparison also shows that the findings regarding **Xiqi** village and **Anfu** village is statistically significant.
+
+## **5.2. Creating a LISA Cluster Map**
+
+LISA map is a categorical map showing outliers and clusters. There are two types of outliers namely: High-Low and Low-High outliers. Likewise, there are two type of clusters namely: High-High and Low-Low cluaters. In fact, LISA map is an interpreted map by combining local Moran's I of geographical areas and their respective p-values. First, let's filter out parts of the LISA map that is statistically significant at 5%.
+
+```{r}
+lisa_sig <- lisa %>%
+  filter(p_ii < 0.05)
+```
+
+In short, here are the interpretation of each classification:
+
+-   High-Low - High number of cases with neighbors that have low number of cases.
+
+-   High-High - High number of cases with neighbors that have high number of cases.
+
+-   Low-Low - Low number of cases with neighbors that have low number of cases.
+
+-   Low-High - Low number of cases with neighbors that have high number of cases.
+
+```{r}
+tmap_mode("plot")
+tm_shape(lisa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+tm_shape(lisa_sig) +
+  tm_fill("mean") +
+  tm_borders(alpha = 0.4)
+```
+
+From the above, we can see around 3 clusters of statistically significant high-high zones, with several low-highs in the mix.
+
+## **5.3 Hot Spot and Cold Spot Area Analysis**
+
+Next, we will use spatial weights to identify locations of statistically significant hot spots and cold spots in an spatially weighted attribute that are in proximity to one another based on a calculated distance. The analysis groups features when similar high (hot) or low (cold) values are found in a cluster.
+
+### 5.3.1 **Computing local Gi statistics**
+
+The first step is to derive a spatial weight matrix using the steps used previously.
+
+```{r}
+wm_idw <- tainan_clean_cases %>%
+  mutate(nb = st_contiguity(geometry),
+         wts = st_inverse_distance(nb, geometry,
+                                   scale = 1,
+                                   alpha = 1),
+         .before = 1)
+
+wm_idw
+```
+
+Now let us calculate the local Gi statistics.
+
+```{r}
+HCSA <- wm_idw %>%
+  mutate(local_Gi = local_gstar_perm(
+    total_cases, nb, wts, nsim = 99),
+      .before = 1) %>%
+  unnest(local_Gi)
+HCSA
+```
+
+### 5.3.2 **Visualising Gi values**
+
+```{r}
+tmap_mode("plot")
+map3 <- tm_shape(HCSA) +
+  tm_fill("gi_star") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Gi* of dengue cases",
+            main.title.size = 0.8) +
+  tm_view(set.zoom.limits = c(6,8))
+
+map3
+```
+
+To interpret the map, greater value in either direction represents stronger clustering, with positive values being hot clusters and negative values being cold clusters. In the Gi value plot above, the hot spot area identified in previous section extends to Da'an village as well, with **Mingliang** village down south and **Sanhe** village to the east. Meanwhile when looking at cold spots, the most notable area would be the stretch up north from **Chengxi** village to **Chang'an** village.
+
+### 5.3.3 **Visualising local HCSA with p-values**
+
+To get an effective comparison, let's plot it against the p-values.
+
+```{r}
+map4 <-
+  tm_shape(HCSA) +
+  tm_fill("p_sim",
+          breaks = c(0, 0.001, 0.01, 0.05, 1),
+          labels = c("0.01", "0.01", "0.05", "Not sig.")) +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "p-value of Gi*",
+            main.title.size = 0.8) +
+  tm_view(set.zoom.limits = c(6,8))
+
+tmap_arrange(map3, map4, ncol = 2)
+```
+
+p-value map though seems to contain a mixed response, with places identified previously like **Chengxi** village being classified as not significant.
+
+### 5.3.4 **Visualising hot spot and cold spot areas**
+
+Now, let us plot the significant hot and cold spot areas of dengue cases.
+
+```{r}
+HCSA_sig <- HCSA %>% filter(p_sim <0.05)
+
+tmap_mode("plot")
+tm_shape(HCSA) +
+  tm_polygons() + 
+  tm_borders(alpha = 0.5) +
+  tm_shape(HCSA_sig) +
+  tm_fill("gi_star") + 
+  tm_borders(alpha = 0.4)
+```
+
+By combining the statistics together, we can see that the significant hot spots can still be identified, but the northwest portion of the most notable cold spot is not significant.
+
+# 6. Emerging Hotspot Analysis
+
+Emerging Hot Spot Analysis (EHSA) is a spatio-temporal analysis method for revealing and describing how hot spot and cold spot areas evolve over time. In our case, we will employ EHSA to investigate the spatio-temporal dynamics of dengue cases in the Tainan region during the period from EpiWeek 31 to 50 in the year 2023, shedding light on the evolving patterns of hot spots and cold spots over this specific timeframe.
+
+## **6.1 Computing Gi\***
+
+We will first identify neighbors and derive their inverse distance weights. Recall that we created a spacetime cube object earlier, ***dengue_spacetime***.
+
+```{r}
+dengue_nb <- dengue_spacetime %>%
+  activate("geometry") %>%
+  mutate(nb = include_self(st_contiguity(geometry)),
+         wt = st_inverse_distance(nb, geometry,
+                                  scale = 1,
+                                  alpha = 1),
+         .before = 1) %>%
+  set_nbs("nb") %>%
+  set_wts("wt")
+```
+
+Using glimpse() to check out the data reveals the neighbors and weights for each time-slice for each village.
+
+```{r}
+glimpse(dengue_nb)
+```
+
+## **6.2 Computing Gi\* for each location**
+
+With that, we can use these new columns to manually calculate the local Gi\* for each location. by grouping by *Epiweek* and using *`local_gstar_perm()`* of **sfdep** package. After which, we use *`unnest()`* to unnest **gi_star** column of the newly created **gi_starts** dataframe.
+
+```{r}
+gi_stars <- dengue_nb %>%
+  group_by(epiweek) %>%
+  mutate(gi_star = local_gstar_perm(
+    total_cases, nb, wt)) %>%
+  tidyr::unnest(gi_star)
+```
+
+## 6.3 **Mann-Kendall Test**
+
+With our Gi\* statistics in hand, let us take a deeper look at each location and evaluate for a trend using Mann-Kendall test. Let us first try it on **Xiqi** village, one of the hot spots identified in our local spatial autocorrelation analysis above.
+
+```{r}
+xiqi_mkt <- gi_stars %>%
+  ungroup %>%
+  filter(village == "Xiqi") %>%
+  select(village, epiweek, gi_star)
+```
+
+```{r}
+ggplot(data = xiqi_mkt,
+       aes(x=epiweek, y=gi_star)) +
+  geom_line(group = 1) +
+  theme_light()
+```
+
+The Mann-Kendall test shows that Xiqi village is an emerging hot spot from week 31 peaking at week 34, before slowly cooling down and hovering around the average range from week 39 onwards.
+
+To replicate this for each village, we will use group_by() function.
+
+```{r}
+ehsa <- gi_stars %>%
+  group_by(village) %>%
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) %>%
+  tidyr::unnest_wider(mk)
+```
+
+Next, we will arrange it to show significant emerging hot and cold spots.
+
+```{r}
+emerging <- ehsa %>%
+  arrange(sl, abs(tau)) %>%
+  slice(1:5)
+```
+
+## 6.3 **Performing Emerging Hotspot Analysis**
+
+Lastly, we will perform EHSA analysis by using *`emerging_hotspot_analysis()`* of **sfdep** package, which takes the spacetime cube object dengue_spacetime and the name of the variable of interest, in this case total_cases.
+
+```{r}
+ehsa <- emerging_hotspot_analysis(
+  x = dengue_spacetime,
+  .var = "total_cases",
+  k = 1,
+  nsim = 99
+)
+```
+
+```{r}
+ehsa
+```
+
+## 6.4 **Visualising the distribution of EHSA classes**
+
+We will then use ggplot2 to visualise the distribution of EHSA classes.
+
+```{r}
+ggplot(data = ehsa,
+       aes(x = classification)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Distribution of EHSA classes",
+       x = "EHSA classes",
+       y = "Count")
+```
+
+Here are the definitions of each notable EHSA classes, courtesy of Prof Kam's slides:
+
+-   Oscillating Hot spots - A statistically significant hot spot for the final time-step interval that has a history of also being a statistically significant cold spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant hot spots.
+
+-   Sporadic Hot spots - A statistically significant hot spot for the final time-step interval with a history of also being an on-again and off-again hot spot. Less than 90 percent of the time-step intervals have been statistically significant hot spots and none of the time-step intervals have been statistically significant cold spots.
+
+The cold spots version would just be the vice versa of the description above.
+
+By visualising the distribution, we can see that majority of the distribution belongs to the oscillating hot/cold spots, with some being sporadic hot/cold spots. This perhaps signify that the local authorities are doing a relatively good job at controlling dengue outbreaks, as dengue hot spots tend to not stay for long.
+
+## 6.5 **Visualising EHSA**
+
+Now that we have an idea of the distribution of EHSA classes, let's visualise the geographic distribution instead. But before we can do that, let us first combine tainan_clean with their EHSA classes.
+
+```{r}
+tainan_ehsa <- tainan_clean %>%
+  left_join(ehsa,
+            by = join_by(village == location)) %>%
+  select(3:7)
+```
+
+```{r}
+ehsa_sig <- tainan_ehsa %>%
+  filter(p_value < 0.05)
+
+tmap_mode("plot")
+tm_shape(tainan_ehsa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+tm_shape(ehsa_sig) +
+  tm_fill("classification") +
+  tm_borders(alpha = 0.4)
+```
+
+# 7. Conclusion
+
+```{r}
+tmap_mode("view")
+tm_shape(tainan_clean_cases) +
+  tm_polygons("village") +
+  tmap_options(max.categories = 257)
+```
+
+In our Global Spatial Autocorrelation Analysis, we've discovered through Global Moran's I test and Geary's test, backed by Monte Carlo simulation of each, that there is a strong positive spatial autocorrelation in terms of dengue cases count, and the results are statistically significant. This shows that dengue outbreaks are no coincidence, and a village with high number of dengue cases means that the neighboring villages have a high probability of having a dengue outbreak too. Considering the nature of how dengue fever is transmitted, this would be a fair conclusion.
+
+Taking a closer look at the village level, our Local Spatial Autocorrelation Analysis reveals both areas with far above average number of dengue cases and those that are far below, in short, outliers. By comparing local Moran's I values and their respective p-values, we have discovered that villages like there is a cluster of villages with abnormally higher number of cases, mainly **Xiqi** and **Anfu** village.
+
+When we look at LISA cluster map and hot spot/cold spot area analysis, the results further identify these 2 region as high-highs and hot spot area respectively, reinforcing the fact that they are indeed has been a dengue red zone during the specified time period, in Singapore's terms. Another 2 hot spots revealed by these analysis is **Mingliang** village down south and **Sanhe** village to the east.
+
+However, differing from only looking at local Moran's I values, these 2 named analysis also reveals low-lows or cold spots, which are areas that are clustered together, that have a significantly low number of dengue cases. The most noticeable at a glance would be the cluster of cold spots up north, stretching from **Chengxi** village to **Chang'an** village. Despite that, the area closer to **Chengxi** village seems to not be statistically significant leaving only the region directly centre-north as the main cluster of cold spots.
+
+Lastly, our findings from Emerging Hotspot Analysis (EHSA) reveals that the majority of the villages including areas identified like Xiqi, Anfu, Mingliang, are oscillating hot spots, signifying that the outbreak is only towards the later part of the time frame. The only exception is Sanhe being an oscillating cold spot, which could indicate that the dengue broke out here first as compared to the villages mentioned above.
+
+Overall, our findings from this assignment suggests that 1) dengue tends to break out in clusters and the neighboring areas of a village with dengue outbreak has a high risk of being the next, due to the nature of how dengue is transmitted and 2) outbreaks are generally well-contained by the local authorities as the number of villages that are consecutive hotspots are close to none.
+
+# 8. Reflection
+
+The materials provided in class was very thorough and well-explained, as I am able to complete around 70% of this assignment following hands-on exercises, in-class exercises, and lesson slides alone. The other 30% would come from searching up documentations of functions that we've never tried before in class like doing geary_test using sfdep package, or understanding the general idea and the concept behind a spacetime cube object. Overall, this assignment allows me to better appreciate the beauty of what stories could be told from data alone, especially when using right and efficient tools like geospatial visualisations and statistical analysis, with the formal being the main tool of this module. I am immensely satisfied with what I've learned through these assignments, and I am looking forward to what I can pick up next in these hands-on approaches.

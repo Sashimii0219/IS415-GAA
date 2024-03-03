@@ -1,0 +1,14 @@
+{
+  "hash": "7b236c5d7146469cf252a3d9942f4a27",
+  "result": {
+    "markdown": "---\ntitle: \"Hands-on Exercise 7\"\nformat: \n  html:\n    code-fold: true\n    code-summary: \"Show code\"\nexecute: \n  eval: true\n  echo: true\n  freeze: auto\n  warning: false\ndate: \"2024-03-03\"\n---\n\n\n# 1. Learning Objective\n\n# 2. Getting Started\n\n## 2.1 Context\n\n## **2.2 Loading R Packages**\n\nThe R packages that we will be using today are:\n\n-   sf is use for importing and handling geospatial data in R,\n\n-   tidyverse is mainly use for wrangling attribute data in R,\n\n-   spdep will be used to compute spatial weights, global and local spatial autocorrelation statistics, and\n\n-   tmap will be used to prepare cartographic quality chropleth map.\n\n\n::: {.cell}\n\n:::\n\n\n## 2.3 Data Importing and Preparation\n\n### 2.3.1 Dataset\n\nWe will be using the following dataset in this hands-on exercise:\n\n### 2.3.2 Importing Data\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
