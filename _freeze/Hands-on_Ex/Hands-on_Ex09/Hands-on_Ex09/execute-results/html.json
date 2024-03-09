@@ -1,0 +1,14 @@
+{
+  "hash": "e829024f7c5db00fbd33c6a541864f47",
+  "result": {
+    "markdown": "---\ntitle: \"Hands-on Exercise 9\"\nformat: \n  html:\n    code-fold: true\n    code-summary: \"Show code\"\nexecute: \n  eval: true\n  echo: true\n  freeze: auto\n  warning: false\ndate: \"2024-03-07\"\n---\n\n::: {.cell}\n\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

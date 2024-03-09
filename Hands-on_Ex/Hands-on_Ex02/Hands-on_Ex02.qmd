@@ -7,7 +7,7 @@ format:
 execute: 
   eval: true
   echo: true
-  freeze: auto
+  freeze: true
   warning: false
 date: "`r Sys.Date()`"
 ---

@@ -1,0 +1,17 @@
+---
+title: "Hands-on Exercise 9"
+format: 
+  html:
+    code-fold: true
+    code-summary: "Show code"
+execute: 
+  eval: true
+  echo: true
+  freeze: auto
+  warning: false
+date: "`r Sys.Date()`"
+---
+
+```{r}
+
+```
