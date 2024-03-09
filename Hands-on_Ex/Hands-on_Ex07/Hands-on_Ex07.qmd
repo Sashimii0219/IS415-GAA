@@ -1,5 +1,5 @@
 ---
-title: "Hands-on Exercise 7"
+title: "Hands-on Exercise 7 - Geographic Segmentation"
 format: 
   html:
     code-fold: true
