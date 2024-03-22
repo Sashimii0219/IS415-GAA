@@ -129,7 +129,6 @@ corrplot::corrplot(cor(mdata_nogeo[, 2:17]),
 # **4. Building a non-spatial multiple linear regression**
 
 ```{r}
-#| eval: false
 price_mlr <- lm(resale_price ~ floor_area_sqm +
                   storey_order + remaining_lease_mths +
                   PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
@@ -142,7 +141,6 @@ summary(price_mlr)
 ```
 
 ```{r}
-#| eval: false
 write_rds(price_mlr, "data/rds/price_mlr.rds" ) 
 ```
 
@@ -162,7 +160,6 @@ train_data_sp
 Next, *`bw.gwr()`* of **GWmodel** package will be used to determine the optimal bandwidth to be used.
 
 ```{r}
-#| eval: false
 bw_adaptive <- bw.gwr(resale_price ~ floor_area_sqm +
                   storey_order + remaining_lease_mths +
                   PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
@@ -178,7 +175,6 @@ bw_adaptive <- bw.gwr(resale_price ~ floor_area_sqm +
 ```
 
 ```{r}
-#| eval: false
 write_rds(bw_adaptive, "data/rds/bw_adaptive.rds")
 ```
 
@@ -191,7 +187,6 @@ bw_adaptive <- read_rds("data/rds/bw_adaptive.rds")
 Now, we can go ahead to calibrate the gwr-based hedonic pricing model by using adaptive bandwidth and Gaussian kernel as shown in the code chunk below.
 
 ```{r}
-#| eval: false
 gwr_adaptive <- gwr.basic(formula = resale_price ~
                             floor_area_sqm + storey_order +
                             remaining_lease_mths + PROX_CBD + 
@@ -208,7 +203,6 @@ gwr_adaptive <- gwr.basic(formula = resale_price ~
 ```
 
 ```{r}
-#| eval: false
 write_rds(gwr_adaptive, "data/rds/gwr_adaptive.rds")
 ```
 
@@ -233,7 +227,6 @@ test_data_sp
 ## 5.6 **Computing adaptive bandwidth for the test data**
 
 ```{r}
-#| eval: false
 gwr_bw_test_adaptive <- bw.gwr(resale_price ~ floor_area_sqm +
                   storey_order + remaining_lease_mths +
                   PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +
@@ -251,21 +244,24 @@ gwr_bw_test_adaptive <- bw.gwr(resale_price ~ floor_area_sqm +
 ## **5.7 Computing predicted values of the test data**
 
 ```{r}
-#| eval: false
-gwr_pred <- gwr.predict(formula = resale_price ~
-                          floor_area_sqm + storey_order +
-                          remaining_lease_mths + PROX_CBD + 
-                          PROX_ELDERLYCARE + PROX_HAWKER + 
-                          PROX_MRT + PROX_PARK + PROX_MALL + 
-                          PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +
-                          WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + 
-                          WITHIN_1KM_PRISCH, 
-                        data=train_data_sp, 
-                        predictdata = test_data_sp, 
-                        bw=40, 
-                        kernel = 'gaussian', 
-                        adaptive=TRUE, 
-                        longlat = FALSE)
+glimpse(train_data_sp)
+```
+
+```{r}
+# gwr_pred <- gwr.predict(resale_price ~
+#                           floor_area_sqm + storey_order +
+#                           remaining_lease_mths + PROX_CBD + 
+#                           PROX_ELDERLYCARE + PROX_HAWKER + 
+#                           PROX_MRT + PROX_PARK + PROX_MALL + 
+#                           PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +
+#                           WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + 
+#                           WITHIN_1KM_PRISCH, 
+#                         data=train_data_sp, 
+#                         predictdata = test_data_sp, 
+#                         bw=40, 
+#                         kernel = 'gaussian', 
+#                         adaptive=TRUE, 
+#                         longlat = FALSE)
 ```
 
 # **6. Preparing coordinates data**
@@ -294,7 +290,6 @@ train_data <- train_data %>%
 In this section, we will learn how to calibrate a model to predict HDB resale price by using random forest function of **ranger** package.
 
 ```{r}
-#| eval: false
 set.seed(1234)
 rf <- ranger(resale_price ~ floor_area_sqm + storey_order + 
                remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE + 
@@ -307,7 +302,6 @@ rf
 ```
 
 ```{r}
-#| eval: false
 write_rds(rf, "data/rds/rf.rds")
 ```
 
@@ -321,7 +315,6 @@ rf
 The code chunk below calibrate a geographic ranform forest model by using *`grf()`* of **SpatialML** package.
 
 ```{r}
-#| eval: false
 set.seed(1234)
 gwRF_adaptive <- grf(formula = resale_price ~ floor_area_sqm + storey_order +
                        remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE +
@@ -336,7 +329,6 @@ gwRF_adaptive <- grf(formula = resale_price ~ floor_area_sqm + storey_order +
 ```
 
 ```{r}
-#| eval: false
 write_rds(gwRF_adaptive, "data/rds/gwRF_adaptive.rds")
 ```
 
@@ -356,9 +348,8 @@ test_data <- cbind(test_data, coords_test) %>%
 Next, `predict.grf()` of spatialML package will be used to predict the resale value by using the test data and gwRF_adaptive model calibrated earlier.
 
 ```{r}
-#| eval: false
-gwRF_pred <- predict.grf(gwRF_adaptive, 
-                           test_data, 
+gwRF_pred <- predict.grf(gwRF_adaptive,
+                           test_data,
                            x.var.name="X",
                            y.var.name="Y", 
                            local.w=1,
@@ -368,7 +359,6 @@ gwRF_pred <- predict.grf(gwRF_adaptive,
 ### Converting the predicting output into a data frame
 
 ```{r}
-#| eval: false
 GRF_pred <- write_rds(gwRF_pred, "data/rds/GRF_pred.rds")
 ```
 
